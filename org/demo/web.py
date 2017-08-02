@@ -7,7 +7,7 @@ app = Flask(__name__)
 @app.route('/')
 def cookie_insertion():
     resp = make_response('hello')
-    resp.set_cookie('username', 'the username',domain='.example.com')
+    resp.set_cookie('username', 'the username',domain='127.0.0.1')
     return resp
 
 if __name__ == '__main__':
