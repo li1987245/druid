@@ -1073,6 +1073,16 @@ LOAD DATA LOCAL INPATH '/home/hadoop/ywendeng/user.txt' INTO TABLE table2;
 
 (2) 加载 HDFS 中的文件。
 LOAD DATA  INPATH '/advance/hive/user.txt' INTO TABLE table4;
+
+(3) sql插入，动态分区
+SET hive.exec.dynamic.partition=true;  
+SET hive.exec.dynamic.partition.mode=nonstrict; 
+SET hive.exec.max.dynamic.partitions.pernode = 1000;
+SET hive.exec.max.dynamic.partitions=1000;
+ 
+INSERT overwrite TABLE t_lxw1234_partitioned PARTITION (month,day) 
+SELECT url,substr(day,1,7) AS month,day 
+FROM t_lxw1234;
 ````
 5. 查询
 ````
