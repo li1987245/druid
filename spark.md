@@ -113,6 +113,22 @@ df.createOrReplaceTempView('web_site')
 sqlDF=spark.sql('select * from web_site limit 1')
 sqlDF.show()
 ```
+- spark sql
+```markdown
+spark-sql --master yarn  --driver-cores 1 --hiveconf "spark.sql.warehouse.dir=hdfs://localhost:9000/user/hive/warehouse" 
+$SPARK_HOME/sbin/start-thriftserver.sh --master yarn    --driver-java-options "-Dspark.driver.port=4050" --hiveconf "hive.server2.thrift.port=10000"  --hiveconf "hive.metastore.warehouse.dir=hdfs://localhost:9000/user/hive/warehouse"
+$SPARK_HOME/bin/beeline --hiveconf hive.server2.thrift.port=10000 --hiveconf "hive.metastore.warehouse.dir=hdfs://localhost:9000/user/hive/warehouse"
+beeline> !connect jdbc:hive2://localhost:10000
+0: jdbc:hive2://localhost:10000> !quit
+增加hive配置后可直接访问hive数据(元数据)
+the hive.metastore.warehouse.dir property in hive-site.xml is deprecated since Spark 2.0.0. Instead, use spark.sql.warehouse.dir to specify the default location of database in warehouse.
+```
+-hive
+```markdown
+将Hive中的hive-site.xml文件拷贝到Spark的conf目录下
+pyspark --jars /home/jinwei/tool/mysql-connector-java-5.1.43.jar
+sqlContext.sql("show databases").show()
+```
 - jdbc连接其他数据源
 ```markdown
 bin/spark-shell --driver-class-path postgresql-9.4.1207.jar --jars postgresql-9.4.1207.jar
@@ -143,15 +159,15 @@ jdbcDF.write \
     .option("user", "username") \
     .option("password", "password") \
     .save()
-l=[{"id":11,"name":"测试","parentId":2,"companyLevel":3}]
+l=[{"id":11,"name":u"测试","parentId":2,"companyLevel":3}] #中文字符串要明确unicode编码，否则乱码
 df=sqlContext.createDataFrame(l)
 df.write \
     .format("jdbc") \
-    .option("url", "jdbc:postgresql:dbserver") \
+    .option("url", "jdbc:mysql://localhost:3306?useUnicode=true&characterEncoding=UTF-8") \
     .option("dbtable", "zh_mydemo.company") \
-    .option("user", "username") \
-    .option("password", "password") \
-    .save()
+    .option("user", "root") \
+    .option("password", "admin") \
+    .save(mode="append")
 
 jdbcDF.write \
         .option("createTableColumnTypes", "name CHAR(64), comments VARCHAR(1024)") \
@@ -193,4 +209,28 @@ SyntaxError: invalid syntax
 解决方案：from __future__ import print_function
 
 
+```
+
+
+- Performance Tuning
+```markdown
+Caching Data In Memory
+Spark SQL can cache tables using an in-memory columnar format by calling spark.catalog.cacheTable("tableName") or dataFrame.cache(). Then Spark SQL will scan only required columns and will automatically tune compression to minimize memory usage and GC pressure. You can call spark.catalog.uncacheTable("tableName") to remove the table from memory.
+
+Configuration of in-memory caching can be done using the setConf method on SparkSession or by running SET key=value commands using SQL.
+
+Property Name	Default	Meaning
+spark.sql.inMemoryColumnarStorage.compressed	true	When set to true Spark SQL will automatically select a compression codec for each column based on statistics of the data.
+spark.sql.inMemoryColumnarStorage.batchSize	10000	Controls the size of batches for columnar caching. Larger batch sizes can improve memory utilization and compression, but risk OOMs when caching data.
+Other Configuration Options
+The following options can also be used to tune the performance of query execution. It is possible that these options will be deprecated in future release as more optimizations are performed automatically.
+
+Property Name	Default	Meaning
+spark.sql.files.maxPartitionBytes	134217728 (128 MB)	The maximum number of bytes to pack into a single partition when reading files.
+spark.sql.files.openCostInBytes	4194304 (4 MB)	The estimated cost to open a file, measured by the number of bytes could be scanned in the same time. This is used when putting multiple files into a partition. It is better to over estimated, then the partitions with small files will be faster than partitions with bigger files (which is scheduled first).
+spark.sql.broadcastTimeout	300	
+Timeout in seconds for the broadcast wait time in broadcast joins
+
+spark.sql.autoBroadcastJoinThreshold	10485760 (10 MB)	Configures the maximum size in bytes for a table that will be broadcast to all worker nodes when performing a join. By setting this value to -1 broadcasting can be disabled. Note that currently statistics are only supported for Hive Metastore tables where the command ANALYZE TABLE <tableName> COMPUTE STATISTICS noscan has been run.
+spark.sql.shuffle.partitions	200	Configures the number of partitions to use when shuffling data for joins or aggregations.
 ```
