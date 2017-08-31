@@ -61,6 +61,32 @@ rdd=sc.textFile('hdfs://localhost:9000/tmp/tpcds-generate/2/web_page/data-m-0000
 ```markdown
 df=textfile.rdd
 ```
+- RDD to DataFrame
+```markdown
+>>> l = [('Alice', 1)]
+>>> sqlContext.createDataFrame(l).collect()
+[Row(_1=u'Alice', _2=1)]
+>>> sqlContext.createDataFrame(l, ['name', 'age']).collect()
+[Row(name=u'Alice', age=1)]
+
+>>> d = [{'name': 'Alice', 'age': 1}]
+>>> sqlContext.createDataFrame(d).collect()
+[Row(age=1, name=u'Alice')]
+
+>>> rdd = sc.parallelize(l)
+>>> sqlContext.createDataFrame(rdd).collect()
+[Row(_1=u'Alice', _2=1)]
+>>> df = sqlContext.createDataFrame(rdd, ['name', 'age'])
+>>> df.collect()
+[Row(name=u'Alice', age=1)]
+
+>>> from pyspark.sql import Row
+>>> Person = Row('name', 'age')
+>>> person = rdd.map(lambda r: Person(*r))
+>>> df2 = sqlContext.createDataFrame(person)
+>>> df2.collect()
+[Row(name=u'Alice', age=1)]
+```
 - workcount:
 ```markdown
 textfile=sc.textFile('hdfs://localhost:9000/tmp/tpcds-generate/2/web_page/data-m-00001')
@@ -98,23 +124,39 @@ jdbcDF = spark.read.format("jdbc").options(
   )).load()
 jdbcDF.createOrReplaceTempView("company")
 
+pyspark --driver-class-path mysql-connector-java-5.1.43.jar --jars /home/jinwei/tool/mysql-connector-java-5.1.43.jar
 jdbcDF = spark.read \
     .format("jdbc") \
     .option("url", "jdbc:mysql://localhost:3306") \
-    .option("dbtable", "schema.tablename") \
+    .option("dbtable", "zh_mydemo.company") \
     .option("user", "root") \
     .option("password", "admin") \
-    .load()
+    .load() #jdbcDF为dataframe
+jdbcDF.groupby("companyLevel").count().show() #查询dbtable数据
 jdbcDF2 = spark.read \
-    .jdbc("jdbc:postgresql:dbserver", "schema.tablename",
+    .jdbc("jdbc:mysql://localhost:3306", "schema.tablename",
           properties={"user": "username", "password": "password","fetchSize":"10000"})
 jdbcDF.write \
     .format("jdbc") \
     .option("url", "jdbc:postgresql:dbserver") \
-    .option("dbtable", "schema.tablename") \
+    .option("dbtable", "zh_mydemo.company") \
     .option("user", "username") \
     .option("password", "password") \
     .save()
+l=[{"id":11,"name":"测试","parentId":2,"companyLevel":3}]
+df=sqlContext.createDataFrame(l)
+df.write \
+    .format("jdbc") \
+    .option("url", "jdbc:postgresql:dbserver") \
+    .option("dbtable", "zh_mydemo.company") \
+    .option("user", "username") \
+    .option("password", "password") \
+    .save()
+
+jdbcDF.write \
+        .option("createTableColumnTypes", "name CHAR(64), comments VARCHAR(1024)") \
+        .jdbc("jdbc:postgresql:dbserver", "schema.tablename",
+              properties={"user": "username", "password": "password"})
 ```
 - 自定义schema
 ```markdown
