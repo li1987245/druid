@@ -23,6 +23,7 @@ export MASTER=spark://${SPARK_MASTER_IP}:${SPARK_MASTER_PORT}
 # spark 1.6开启ipython
 export IPYTHON=1
 ```
+
 hive with spark
 - 编译spark without hive
 ```
@@ -42,7 +43,12 @@ set spark.serializer=org.apache.spark.serializer.KryoSerializer;
 ```
 
 ### 使用
-
+#### spark RDD&DataFrame
+- spark submit
+```markdown
+bin/spark-submit --class path.to.your.Class --master yarn --deploy-mode cluster [options] <app jar> [app options]
+spark-submit --master yarn --deploy-mode client streaming.py #python 
+```
 - DataFrame：
 ```markdown
 text:
@@ -92,6 +98,7 @@ df=textfile.rdd
 textfile=sc.textFile('hdfs://localhost:9000/tmp/tpcds-generate/2/web_page/data-m-00001')
 counts = textfile.flatMap(lambda x: x.split('|')).map(lambda x: (x,1)).reduceByKey(lambda x,y: x+y)
 ```
+#### spark sql
 - 过滤
 ```markdown
 df.filter(df._c2=='1999-09-04').count()
@@ -200,6 +207,28 @@ df = spark.sql("SELECT * FROM parquet.`examples/src/main/resources/users.parquet
 df.write.bucketBy(42, "name").sortBy("age").saveAsTable("people_bucketed")
 df.write.partitionBy("favorite_color").format("parquet").save("namesPartByColor.parquet")
 ```
+#### spark streaming
+- streaming
+```
+from __future__ import print_function
+from pyspark import SparkContext,SparkConf
+from pyspark.streaming import StreamingContext
+sparkConf = SparkConf()
+sc = SparkContext(appName="stream",conf=sparkConf)
+sc.setLogLevel("WARN")
+ssc = StreamingContext(sc,1)
+lines = ssc.socketTextStream("localhost", 9999) #Dstream
+words = lines.flatMap(lambda line: line.split(" ")).map(lambda word: (word,1)).reduceByKey(lambda a,b: a+b)
+words.pprint()
+ssc.start()
+ssc.awaitTermination()
+```
+- Structured Streaming
+```markdown
+
+
+```
+
 
 ### 问题
 ```markdown
@@ -207,7 +236,14 @@ df.write.partitionBy("favorite_color").format("parquet").save("namesPartByColor.
 In [18]: textfile.foreach(print)
 SyntaxError: invalid syntax
 解决方案：from __future__ import print_function
-
+2. Neither spark.yarn.jars nor spark.yarn.archive is set, falling back to uploading libraries under SPARK_HOME
+To make Spark runtime jars accessible from YARN side, you can specify spark.yarn.archive or spark.yarn.jars. 
+For details please refer to Spark Properties. If neither spark.yarn.archive nor spark.yarn.jars is specified, 
+Spark will create a zip file with all jars under $SPARK_HOME/jars and upload it to the distributed cache.
+hadoop fs -mkdir -p hdfs:///tmp/spark/lib_jars/
+hadoop fs -put  $SPARK_HOME/jars/* hdfs:///tmp/spark/lib_jars/
+vim $SPARK_HOME/conf/spark-defaults.conf
+添加spark.yarn.jars hdfs:///tmp/spark/lib_jars/*.jar
 
 ```
 
