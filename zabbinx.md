@@ -22,6 +22,7 @@ wget https://ftp.pcre.org/pub/pcre/pcre-8.41.tar.gz
 tar xzf pcre-8.41.tar.gz
 cd pcre-8.41
 ./configure --enable-utf8  && make && make install
+ln -s /usr/local/lib/libpcre.so.1 /lib64/
 yum install -y libcurl libcurl-devel
 yum install expat-devel # apr-util依赖
 yum install -y libpng libpng-devel #php依赖
@@ -50,7 +51,7 @@ shell> mysql -uzabbix -pzabbix zabbix < data.sql
 1. [vim  /usr/local/etc/zabbix_server.conf](http://www.ttlsa.com/zabbix/zabbix_server-conf-detail/)
 ```markdown
 AllowRoot=0 #是否允许使用root身份运行zabbix，如果值为0，并且是在root环境下，zabbix会尝试使用zabbix用户运行，如果不存在会告知zabbix用户不存在。0 - 不允许,1 - 允许
-DBHost=localhost
+DBHost=172.168.1.102
 DBName=zabbix
 DBUser=zabbix
 DBPassword=zabbix
@@ -66,10 +67,14 @@ ListenPort=10051
 
 - 启动
 ```markdown
+cp misc/init.d/fedora/core/zabbix_server /etc/init.d/
+chkconfig --add zabbix_server
+chkconfig zabbix_server on
 zabbix_server
+netstat -nplut |grep zabbix
 ```
 - 前端
-1. apache
+1. [apache](http://www.cnblogs.com/apro-abra/p/4862285.html)
 ```markdown
 APR:
 wget http://mirrors.hust.edu.cn/apache//apr/apr-1.6.2.tar.gz
@@ -89,12 +94,45 @@ make && make install
 ```
 2. php
 ```markdown
+
 wget http://am1.php.net/distributions/php-7.1.9.tar.gzwget http://am1.php.net/distributions/php-7.1.9.tar.gz
 tar xzf php-7.1.9.tar.gz
-./configure --with-apxs2=/usr/local/apache/bin/apxs --with-curl  --with-freetype-dir  --with-gd  --with-gettext  --with-iconv-dir  --with-kerberos  --with-libdir=lib64  --with-libxml-dir  --with-mysqli  --with-openssl  --with-pcre-regex  --with-pdo-mysql  --with-pdo-sqlite  --with-pear  --with-png-dir  --with-xmlrpc  --with-xsl  --with-zlib  --enable-fpm  --enable-bcmath  --enable-libxml  --enable-inline-optimization  --enable-gd-native-ttf  --enable-mbregex  --enable-mbstring  --enable-opcache  --enable-pcntl  --enable-shmop  --enable-soap  --enable-sockets  --enable-sysvsem  --enable-xml  --enable-zip
+./configure --prefix=/usr/local/php7 --with-config-file-path=/etc --with-apxs2=/usr/local/apache/bin/apxs --with-curl --with-freetype-dir  --with-gettext --with-iconv-dir --with-kerberos --with-libdir=lib64 --with-libxml-dir --with-mysqli --with-openssl --with-pcre-regex --with-pdo-mysql --with-pdo-sqlite --with-pear --with-png-dir --with-xmlrpc --with-xsl --with-zlib --enable-fpm --enable-bcmath --enable-libxml --enable-inline-optimization --enable-gd-native-ttf --enable-mbregex --enable-mbstring --enable-opcache --enable-pcntl --enable-shmop --enable-soap --enable-sockets --enable-sysvsem --enable-xml --enable-zip
+make clean
 make && make install
+
+
+libjpeg(php jpeg支持)
+wget http://www.ijg.org/files/jpegsrc.v9b.tar.gz
+tar zxvf jpegsrc.v9b.tar.gz
+cd jpeg-9b
+./configure --prefix=/usr/local/php/jpeg --enable-shared --enable-static
+make
+make install
+yum install libjpeg-devel
+cd ext/gd/
+/usr/local/php7/bin/phpize
+./configure --with-php-config=/usr/local/php7/bin/php-config --with-jpeg-dir --with-freetype-dir
+make clean
+make && make install
+#Installing shared extensions:     /usr/local/php7/lib/php/extensions/no-debug-zts-20160303/
+#Installing header files:          /usr/local/php7/include/php/
+mv /usr/local/php7/lib/php/extensions/no-debug-zts-20160303/gd.so /usr/local/php7/lib/php/extensions/
+vim /etc/php.ini
+#extension_dir = "/usr/local/php7/lib/php/extensions/"
+#extension=gd.so
+service httpd restart
+service php-fpm restart
+
+<?php
+
+     phpinfo();
+
+?>
+可以获得配置信息
+PHP的session存放路径及其配置session.save_path
 ```
-3. 配置
+3. apache配置
 vim /usr/local/apache/conf/httpd.conf
 ```markdown
 修改ServerName=172.168.1.106:80
@@ -103,12 +141,33 @@ vim /usr/local/apache/conf/httpd.conf
     SetHandler application/x-httpd-php
 </FilesMatch>
 ```
-
-- 启动
+4. 拷贝
+```markdown
+cd frontends/php
+cp -a . /usr/local/apache/htdocs/zabbix
+```
+5. 启动
 ```markdown
 ./apachectl start
+./apachectl stop
+./apachectl restart 
 ```
+6. 前端配置
+```markdown
+http://172.168.1.106/zabbix/setup.php
+create database zabbix DEFAULT CHARSET utf8 COLLATE utf8_general_ci;
+grant all on zabbix.* to zabbix@'%' identified by 'zabbix';
+flush privileges;
 
+cd $zabbix/database/mysql
+mysql -h172.168.1.102 -uzabbix -pzabbix zabbix<schema.sql
+mysql -h172.168.1.102 -uzabbix -pzabbix zabbix<images.sql
+mysql -h172.168.1.102 -uzabbix -pzabbix zabbix<data.sql
+
+vim /usr/local/apache/htdocs/zabbix/conf/zabbix.conf.php
+zabbix web地址172.168.1.106:10051
+用户名及密码Admin/zabbix
+```
 
 ### agent
 - 配置文件
@@ -122,5 +181,8 @@ Server=172.168.1.106 # zabbix server的ip地址，多个ip使用逗号分隔
 ```
 - 启动
 ```markdown
+cp misc/init.d/fedora/core/zabbix_agentd /etc/init.d/
+chkconfig --add zabbix_agentd
+chkconfig zabbix_agentd on
 zabbix_agentd
 ```
