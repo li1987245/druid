@@ -18,4 +18,5 @@ def foo():
     sleep(random.randint(1,5))
 
 
-foo()
+if __name__ == '__main__':
+    pass
