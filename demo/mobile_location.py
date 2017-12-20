@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import pyhs2
 import sys
+from math import *
 
 default_encoding = 'utf-8'
 if sys.getdefaultencoding() != default_encoding:
@@ -43,9 +44,12 @@ def load_data():
     省份代码、业务类型、主叫号码、城市编码、纬度、经度、呼叫时间、错误类型、被叫号码、imsi、基站ID
     :return:
     """
-    client = HiveClient(db_host='172.168.1.101', database='operator')
-    client.query("load data local inpath '/opt/xingjie/data/data.txt' into table operator.call_record_raw")
+    print '数据加载中。。。'
+    client = HiveClient(db_host='172.168.1.101', port=10000, database='operator', user='hdfs', password='hdfs',
+                        authMechanism='PLAIN')
+    client.query("load data inpath '/data/record.dat' overwrite into table operator.call_record_raw")
     client.close()
+    print '数据加载完成'
 
 
 def algorithm():
@@ -54,7 +58,10 @@ def algorithm():
     ARIMA 时间序列
     :return:
     """
-    client = HiveClient(db_host='172.168.1.101', port=10000, database='operator', user='hdfs',password='hdfs', authMechanism='PLAIN')
+    print '时间序列分析开始。。。'
+    print '时间衰减处理。。。'
+    client = HiveClient(db_host='172.168.1.101', port=10000, database='operator', user='hdfs', password='hdfs',
+                        authMechanism='PLAIN')
     client.query("set hive.execution.engine=tez")
     result = client.query("""
     select mobile,latitude,longitude,work_mark from(
@@ -70,7 +77,9 @@ def algorithm():
     ) as result
     where rn=1
     """)
+    print '时间衰减处理完成'
     client.close()
+    print '时间序列分析结束'
     return result
 
 
@@ -83,13 +92,15 @@ def statistics():
     business_type string,
     mobile string,
     city_code string,
-    latitude float,
-    longitude float,
+    raw_latitude float,
+    raw_longitude float,
     call_time string,
     error_code string,
     called_mobile string,
     imsi string,
-    station_id string)
+    station_id string,
+    latitude float,
+    longitude float)
     ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
     STORED AS TEXTFILE;
     load data local inpath '/opt/xingjie/data/data.txt' into table operator.call_record_raw;
@@ -102,13 +113,16 @@ def statistics():
     business_type string,
     mobile string,
     city_code string,
-    latitude float,
-    longitude float,
+    raw_latitude float,
+    raw_longitude float,
     call_time string,
     error_code string,
     called_mobile string,
     imsi string,
-    station_id string)
+    station_id string,
+    latitude float,
+    longitude float
+    )
     PARTITIONED BY (called_day string)
     ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
     STORED AS ORC;
@@ -160,13 +174,62 @@ def statistics():
 
     :return:
     """
+    print '数据处理中。。。'
     client = HiveClient(db_host='172.168.1.101', database='operator')
     client.query("set hive.exec.dynamic.partition.mode=nonstrict")
     client.query("set hive.exec.dynamic.partition=true")
     client.query(
         "insert overwrite table operator.call_record partition (called_day)  select *,to_date(call_time) as called_day from call_record_raw")
     client.close()
+    print '数据处理完成'
+
+
+def calcDistance(Lat_A, Lng_A, Lat_B, Lng_B):
+    ra = 6378.140  # 赤道半径 (km)
+    rb = 6356.755  # 极半径 (km)
+    flatten = (ra - rb) / ra  # 地球扁率
+    rad_lat_A = radians(Lat_A)
+    rad_lng_A = radians(Lng_A)
+    rad_lat_B = radians(Lat_B)
+    rad_lng_B = radians(Lng_B)
+    pA = atan(rb / ra * tan(rad_lat_A))
+    pB = atan(rb / ra * tan(rad_lat_B))
+    xx = acos(sin(pA) * sin(pB) + cos(pA) * cos(pB) * cos(rad_lng_A - rad_lng_B))
+    c1 = (sin(xx) - xx) * (sin(pA) + sin(pB)) ** 2 / cos(xx / 2) ** 2
+    c2 = (sin(xx) + xx) * (sin(pA) - sin(pB)) ** 2 / sin(xx / 2) ** 2
+    dr = flatten / 8 * (c1 - c2)
+    distance = ra * (xx + dr)
+    return distance
 
 
 if __name__ == '__main__':
-    print algorithm()
+    dic = {'18601318215': {0: [116.483953, 39.992974], 1: [116.475154, 40.007741]},
+           '18519278625': {0: [116.483953, 39.992974], 1: [116.768098, 39.973958]}
+        , '13691237961': {0: [116.483953, 39.992974], 1: [116.330759, 40.046214]},
+           '18630322676': {0: [116.483953, 39.992974], 1: [116.3792, 39.996727]}
+        , '15030553802': {0: [116.483953, 39.992974], 1: [116.404481, 40.036045]},
+           '18516886761': {0: [116.483953, 39.992974], 1: [116.33031, 40.083789]}
+        , '18601987245': {0: [116.483953, 39.992974], 1: [116.374574, 40.083395]},
+           '18511587748': {0: [116.483953, 39.992974], 1: [116.36785, 40.083494]}
+        , '15822817746': {0: [116.483953, 39.992974], 1: [116.471462, 39.988357]},
+           '17718355709': {0: [116.483953, 39.992974], 1: [116.40347, 39.995356]}}
+    load_data()
+    statistics()
+    lst = algorithm()
+    resut = {}
+    print '手机号\t居住地纬度\t居住地经度\t工作地纬度\t工作地经度\t居住地距离差（km）\t工作地距离差（km）'
+    for record in lst:
+        mobile = record[0]
+        lat = record[1]
+        lon = record[2]
+        type = int(record[3])
+        if resut.has_key(mobile):
+            resut[mobile][type] = {'lat': lat, 'lon': lon,
+                                   'dis': calcDistance(lat, lon, dic[mobile][type][1], dic[mobile][type][0])}
+        else:
+            resut[mobile] = {'mobile': mobile, type: {'lat': lat, 'lon': lon,
+                                                      'dis': calcDistance(lat, lon, dic[mobile][type][1],
+                                                                          dic[mobile][type][0])}}
+    for k, v in resut.items():
+        print '%s\t%.6f\t%.6f\t%.6f\t%.6f\t%.0f\t%.0f' % (
+        v['mobile'], v[1]['lat'], v[1]['lon'], v[0]['lat'], v[0]['lon'], v[1]['dis'], v[0]['dis'])
