@@ -2,7 +2,7 @@
 import pandas as pd
 import numpy as np
 
-df = pd.read_csv("",index_col=0)
+df = pd.read_csv("/home/jinwei/data/ssq.csv")
 # 重新设置列名
 df.columns = ['r1','r2','r3','r4','r5','r6','b']
 print '对红球排序，取出前五行：'

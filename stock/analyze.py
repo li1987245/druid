@@ -50,7 +50,7 @@ def ex_right():
             continue
         # 迭代所有可能天数
         for d_iter in df.columns:
-
+            pass
 
 
 
