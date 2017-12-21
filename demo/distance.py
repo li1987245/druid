@@ -26,10 +26,10 @@ def calcDistance(Lat_A, Lng_A, Lat_B, Lng_B):
     return distance
 
 
-Lat_A = 39.99
-Lng_A = 116.49  # 计算出来的工作地点
-Lat_B = 39.99
-Lng_B = 116.48  # 工作地点
+Lat_A = 40.05713
+Lng_A = 116.4932  # 计算出来的工作地点
+Lat_B = 40.046214
+Lng_B = 116.330759  # 工作地点
 distance = calcDistance(Lat_A, Lng_A, Lat_B, Lng_B)
 print('(Lat_A, Lng_A)=({0:10.3f},{1:10.3f})'.format(Lat_A, Lng_A))
 print('(Lat_B, Lng_B)=({0:10.3f},{1:10.3f})'.format(Lat_B, Lng_B))
