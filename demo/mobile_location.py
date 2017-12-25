@@ -6,6 +6,7 @@ import sys
 from math import *
 import json
 import cPickle as pickle
+import matplotlib.pyplot as plt
 
 from sklearn.cluster import DBSCAN
 
@@ -56,31 +57,41 @@ def load_data():
     :return:
     """
     print '数据加载中。。。'
-    df = pd.read_csv("/home/jinwei/data/mobile/record.dat", delimiter="\t", index_col=False, header=None,
+    df = pd.read_csv("/home/jinwei/data/mobile/record_raw.txt", delimiter="\t", index_col=False, header=None,
                      names=['province_code', 'business_type', 'mobile', 'city_code', 'raw_latitude', 'raw_longitude',
                             'call_time', 'error_code', 'called_mobile', 'imsi', 'station_id'])
     mobiles = pd.unique(df['mobile'])
     kms_per_radian = 6371.0088
     epsilon = 10 / kms_per_radian
     for mobile in mobiles:
+        # coords = df[df['mobile'] == 18601318215][['raw_longitude', 'raw_latitude']]
         coords = df[df['mobile'] == mobile][['raw_longitude', 'raw_latitude']]
         db = DBSCAN(eps=epsilon, min_samples=10, algorithm='ball_tree', metric='haversine').fit(np.radians(coords))
         cluster_labels = db.labels_
         num_clusters = len(set(cluster_labels))
         clusters = [coords[cluster_labels == n] for n in range(num_clusters)]
         clusters = pd.Series(clusters)
-        centermost_points = clusters[:-1].map(get_centermost_point)
-
-    client = HiveClient(db_host='172.168.1.101', port=10000, database='operator', user='hdfs', password='hdfs',
-                        authMechanism='PLAIN')
-    client.execute("load data inpath '/data/record.dat' overwrite into table operator.call_record_raw")
-    client.close()
+        centermost_points = clusters.map(get_centermost_point)
+        for index,value in enumerate(df[df['mobile'] == mobile].index):
+            label = cluster_labels[index]
+            longitude, latitude = centermost_points[label]
+            # df['mobile'].loc[0]
+            df.loc[value, 'latitude'] = latitude
+            df.loc[value, 'longitude'] = longitude
+    df.to_csv('/home/jinwei/data/mobile/record.data',index=False,header=False)
+    # client = HiveClient(db_host='172.168.1.101', port=10000, database='operator', user='hdfs', password='hdfs',
+    #                     authMechanism='PLAIN')
+    # client.execute("load data inpath '/data/record.dat' overwrite into table operator.call_record_raw")
+    # client.close()
     print '数据加载完成'
 
 
 def get_centermost_point(cluster):
-    centermost_point = min(cluster, key=lambda point: point)
-    return tuple(centermost_point)
+    df = cluster
+    # df.plot.scatter('raw_longitude', 'raw_latitude')
+    # plt.show()
+    result = df.groupby([df['raw_longitude'], df['raw_latitude']])['raw_longitude', 'raw_latitude'].count()
+    return result.index[0]
 
 
 def algorithm():
@@ -245,35 +256,37 @@ def bagging(result, cluster_result):
     print 'bagging clustering and classification ...'
     return result
 
+
 if __name__ == '__main__':
-    dic = {'18601318215': {0: [116.49025, 39.992974], 1: [116.475154, 40.007741]},
-           '18519278625': {0: [116.49025, 39.992974], 1: [116.49323, 39.851498]}
-        , '13691237961': {0: [116.49025, 39.992974], 1: [116.49329, 40.046214]},
-           '18630322676': {0: [116.49025, 39.992974], 1: [116.4792, 39.996727]}
-        , '15030553802': {0: [116.49025, 39.992974], 1: [116.49025, 40.036045]},
-           '18516886761': {0: [116.49025, 39.992974], 1: [116.37693, 40.083789]}
-        , '18601987245': {0: [116.49025, 39.992974], 1: [116.374574, 40.083395]},
-           '18511587748': {0: [116.49025, 39.992974], 1: [116.49785, 40.083494]}
-        , '15822817746': {0: [116.49025, 39.992974], 1: [116.49019, 39.988357]},
-           '17718355709': {0: [116.49025, 39.992974], 1: [116.49347, 40.01964]}}
-    cluster_result = load_result()
-    statistics()
-    lst = algorithm()
-    result = {}
-    for record in lst:
-        mobile = record[0]
-        lat = record[1]
-        lon = record[2]
-        type = int(record[3])
-        if result.has_key(mobile):
-            result[mobile][type] = {'lat': lat, 'lon': lon,
-                                    'dis': calcDistance(lat, lon, dic[mobile][type][1], dic[mobile][type][0])}
-        else:
-            result[mobile] = {'mobile': mobile, type: {'lat': lat, 'lon': lon,
-                                                       'dis': calcDistance(lat, lon, dic[mobile][type][1],
-                                                                           dic[mobile][type][0])}}
-    result = bagging(result, cluster_result)
-    print '手机号\t居住地纬度\t居住地经度\t工作地纬度\t工作地经度\t居住地距离差（km）\t工作地距离差（km）'
-    for k, v in result.items():
-        print '%s\t%.6f\t%.6f\t%.6f\t%.6f\t%.0f\t%.0f' % (
-            v['mobile'], v[1]['lat'], v[1]['lon'], v[0]['lat'], v[0]['lon'], v[1]['dis'], v[0]['dis'])
+    load_data()
+    # dic = {'18601318215': {0: [116.49025, 39.992974], 1: [116.475154, 40.007741]},
+    #        '18519278625': {0: [116.49025, 39.992974], 1: [116.49323, 39.851498]}
+    #     , '13691237961': {0: [116.49025, 39.992974], 1: [116.49329, 40.046214]},
+    #        '18630322676': {0: [116.49025, 39.992974], 1: [116.4792, 39.996727]}
+    #     , '15030553802': {0: [116.49025, 39.992974], 1: [116.49025, 40.036045]},
+    #        '18516886761': {0: [116.49025, 39.992974], 1: [116.37693, 40.083789]}
+    #     , '18601987245': {0: [116.49025, 39.992974], 1: [116.374574, 40.083395]},
+    #        '18511587748': {0: [116.49025, 39.992974], 1: [116.49785, 40.083494]}
+    #     , '15822817746': {0: [116.49025, 39.992974], 1: [116.49019, 39.988357]},
+    #        '17718355709': {0: [116.49025, 39.992974], 1: [116.49347, 40.01964]}}
+    # cluster_result = load_result()
+    # statistics()
+    # lst = algorithm()
+    # result = {}
+    # for record in lst:
+    #     mobile = record[0]
+    #     lat = record[1]
+    #     lon = record[2]
+    #     type = int(record[3])
+    #     if result.has_key(mobile):
+    #         result[mobile][type] = {'lat': lat, 'lon': lon,
+    #                                 'dis': calcDistance(lat, lon, dic[mobile][type][1], dic[mobile][type][0])}
+    #     else:
+    #         result[mobile] = {'mobile': mobile, type: {'lat': lat, 'lon': lon,
+    #                                                    'dis': calcDistance(lat, lon, dic[mobile][type][1],
+    #                                                                        dic[mobile][type][0])}}
+    # result = bagging(result, cluster_result)
+    # print '手机号\t居住地纬度\t居住地经度\t工作地纬度\t工作地经度\t居住地距离差（km）\t工作地距离差（km）'
+    # for k, v in result.items():
+    #     print '%s\t%.6f\t%.6f\t%.6f\t%.6f\t%.0f\t%.0f' % (
+    #         v['mobile'], v[1]['lat'], v[1]['lon'], v[0]['lat'], v[0]['lon'], v[1]['dis'], v[0]['dis'])
