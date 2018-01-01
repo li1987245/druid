@@ -1095,6 +1095,13 @@ CLUSTER BY col_list|[DISTRIBUTE BY col_list]
 [SORT BY col_list]
 ]
 [LIMIT number]
+set hive.map.aggr=true|hive.groupby.mapaggr.checkinterval=100000 设置map端聚合
+set hive.groupby.skewindata=true 防止数据倾斜
+
+
+count(*)    所有值不全为NULL时，加1操作
+count(1)    不管有没有值，只要有这条记录，值就加1
+count(col)  col列里面的值为null，值不会加1，这个列里面的值不为NULL，才加1
 ````
 Hive 的语法结构总结
 ````
@@ -1176,4 +1183,42 @@ parse_url(‘http://facebook.com/path/p1.php?query=1‘, ‘QUERY’)返回’qu
 
 # substr
 ````
-- 
+-
+
+
+### 面试题
+- mapreduce编程模型
+```
+input->map->shuffle->reduce->output
+input:InputFormat(getSplits、getRecordReader)
+map：Mapper（setup、map、cleanup）
+shuffle：Partitioner（getPartition）-》spill（sort-》combiner）-》merge（合并溢出的临时文件）-》copy（reduce从map端拉取数据）-》merge（reduce端做合并，包括排序和溢写到磁盘）
+reduce:Reducer（setup、reduce、cleanup）
+output:OutputFormat(getRecordWriter)
+```
+- spark shuffle
+```
+SortShuffleManager:
+task->memory->sort->spill-merge->task(next stage)
+bypass SortShuffleManager:
+task->memory->spill-merge->task(next stage)
+```
+- hbase put过程
+```
+client(cache,通过设置HTable.setAutoFlush(false)来开启，HTable.setWriteBufferSize(writeBufferSize)来设置大小)->
+zookeeper-》META（定位region server）-》WAL-》memorystore-》storefile（hfile）
+如果客户端已缓存META信息，可直接定位region server
+```
+- hbase get过程
+```
+client-》blockcache-》region
+get实际转化为scan操作（startRow == endRow）
+```
+- spark RDD属性
+```
+1.分区列表，Partition List。这里的分区概念类似hadoop中的split切片概念，即数据的逻辑切片
+2.针对每个split(切片)的计算函数，即同一个RDD的每个切片的数据使用相同的计算函数
+3.对其他rdd的依赖列表
+4.可选，如果是（Key，Value）型的RDD，可以带分区类
+5.可选，首选块位置列表(hdfs block location);
+```
