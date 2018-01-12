@@ -1222,3 +1222,17 @@ get实际转化为scan操作（startRow == endRow）
 4.可选，如果是（Key，Value）型的RDD，可以带分区类
 5.可选，首选块位置列表(hdfs block location);
 ```
+- MapFile && SequenceFile
+```
+SequenceFile在设置append会在写入数据时采用append方式(压缩类型为NONE才会生效),2.7.3版本有BUG，compress codec缺少空值判断
+try (MapFile.Writer writer = new MapFile.Writer(conf, path, MapFile.Writer.keyClass(Text.class), MapFile.Writer.valueClass(Text.class),SequenceFile.Writer.appendIfExists(false))) {
+            Text _key = new Text(key);
+            Text val = new Text(value);
+            writer.append(_key, val);
+        }
+采用追加方式读取时，虽然数据已经写入，但是只能读取到最早数据，MapFile读取时需要建立索引(get、seek方法为同步操作)，不适合迭代读取
+Text _key = new Text(key);
+Text val = new Text();
+reader.get(_key, val);
+return val.toString();
+```
