@@ -969,6 +969,86 @@ source /etc/profile
         
         
 ````
+- 配置
+```markdown
+1. yarn.nodemanager.recovery.enabled 是否启用NM恢复，如果启动在NM启动时建立hdfs路径（需要配置yarn.nodemanager.recovery.dir） 2.7未实现？
+```
+- 操作
+1. append
+```markdown
+
+hadoop fs -appendToFile <localsrc> ... <dst> #dst不存在会默认创建
+hdfs fsck <dst>   -files -blocks -locations -racks # 查看file和block对应关系,http://<namenode>:<port>/fsck?ugi=hdfs&files=1&blocks=1&locations=1&racks=1&path=%2Ftmp%2FidCard
+Usage: DFSck <path> [-move | -delete | -openforwrite] [-files [-blocks [-locations | -racks]]]
+    <path>             检查这个目录中的文件是否完整
+    -move               破损的文件移至/lost+found目录
+    -delete             删除破损的文件
+    -openforwrite   打印正在打开写操作的文件
+    -files                 打印正在check的文件名
+    -blocks             打印block报告 （需要和-files参数一起使用）
+    -locations         打印每个block的位置信息（需要和-files参数一起使用）
+    -racks               打印位置信息的网络拓扑图 （需要和-files参数一起使用
+1.hadoop fs -appendToFile idCard.sh /tmp/idCard
+hdfs fsck /tmp/idCard -files -blocks -locations -racks
+Connecting to namenode via http://credit06:50070/fsck?ugi=hdfs&files=1&blocks=1&locations=1&racks=1&path=%2Ftmp%2FidCard
+FSCK started by hdfs (auth:SIMPLE) from /172.168.1.106 for path /tmp/idCard at Tue Jan 16 15:15:08 CST 2018
+/tmp/idCard 2007 bytes, 1 block(s):  OK
+0. BP-3318860-172.168.1.102-1508745349914:blk_1073988305_251209 len=2007 repl=3 [/default-rack/172.168.1.106:50010, /default-rack/172.168.1.102:50010, /default-rack/172.168.1.105:50010]
+
+Status: HEALTHY
+ Total size:	2007 B
+ Total dirs:	0
+ Total files:	1
+ Total symlinks:		0
+ Total blocks (validated):	1 (avg. block size 2007 B)
+ Minimally replicated blocks:	1 (100.0 %)
+ Over-replicated blocks:	0 (0.0 %)
+ Under-replicated blocks:	0 (0.0 %)
+ Mis-replicated blocks:		0 (0.0 %)
+ Default replication factor:	3
+ Average block replication:	3.0
+ Corrupt blocks:		0
+ Missing replicas:		0 (0.0 %)
+ Number of data-nodes:		4
+ Number of racks:		1
+2.hadoop fs -appendToFile idCard.sh /tmp/idCard
+hdfs fsck /tmp/idCard -files -blocks -locations -racks
+Connecting to namenode via http://credit06:50070/fsck?ugi=hdfs&files=1&blocks=1&locations=1&racks=1&path=%2Ftmp%2FidCard
+FSCK started by hdfs (auth:SIMPLE) from /172.168.1.106 for path /tmp/idCard at Tue Jan 16 15:19:47 CST 2018
+/tmp/idCard 2863 bytes, 1 block(s):  OK
+0. BP-3318860-172.168.1.102-1508745349914:blk_1073988305_251210 len=2863 repl=3 [/default-rack/172.168.1.106:50010, /default-rack/172.168.1.102:50010, /default-rack/172.168.1.105:50010]
+
+Status: HEALTHY
+ Total size:	2863 B
+ Total dirs:	0
+ Total files:	1
+ Total symlinks:		0
+ Total blocks (validated):	1 (avg. block size 2863 B)
+ Minimally replicated blocks:	1 (100.0 %)
+ Over-replicated blocks:	0 (0.0 %)
+ Under-replicated blocks:	0 (0.0 %)
+ Mis-replicated blocks:		0 (0.0 %)
+ Default replication factor:	3
+ Average block replication:	3.0
+ Corrupt blocks:		0
+ Missing replicas:		0 (0.0 %)
+ Number of data-nodes:		4
+ Number of racks:		1
+FSCK ended at Tue Jan 16 15:19:47 CST 2018 in 1 milliseconds
+append 操作会对文件最后的block进行追加，并且修改meta id，namenode映射为新的meta id
+find ./ -name blk_1073988305\*
+ll |grep blk_1073988305
+-rw-r--r--. 1 hdfs hadoop      2863 1月  16 15:19 blk_1073988305
+-rw-r--r--. 1 hdfs hadoop        31 1月  16 15:19 blk_1073988305_251210.meta
+hadoop fs -appendToFile ratings.csv /tmp/idCard
+-rw-r--r--.  1 hdfs hadoop   2438266 12月  6 16:51 ratings.csv
+ll |grep blk_1073988305
+-rw-r--r--. 1 hdfs hadoop   2441129 1月  16 15:42 blk_1073988305 #为追加文件之和
+-rw-r--r--. 1 hdfs hadoop     19079 1月  16 15:42 blk_1073988305_251227.meta
+ll |grep blk_1073988322 #文件路径删除再创建后block id修改
+-rw-r--r--. 1 hdfs hadoop   2438266 1月  16 15:45 blk_1073988322
+-rw-r--r--. 1 hdfs hadoop     19059 1月  16 15:45 blk_1073988322_251229.meta
+```
 # HIVE
 - 数据类型
 1. INT

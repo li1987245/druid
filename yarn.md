@@ -1,0 +1,5 @@
+[Hadoop on Yarn 各组件详细原理](https://www.cnblogs.com/yangsy0915/p/5572983.html)
+[yarn 源码流程](http://blog.csdn.net/jjzhk/article/details/18787739)
+[yarn 状态机](https://www.cnblogs.com/Scott007/p/3893318.html)
+[am 启动流程](http://bigdatadecode.club/YARNSrcApplicationMasterStart.html)
+[akka](http://www.importnew.com/16479.html)
