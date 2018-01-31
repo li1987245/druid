@@ -61,7 +61,7 @@ def load_data():
                      names=['province_code', 'business_type', 'mobile', 'city_code', 'raw_latitude', 'raw_longitude',
                             'call_time', 'error_code', 'called_mobile', 'imsi', 'station_id'])
     mobiles = pd.unique(df['mobile'])
-    kms_per_radian = 6371.0088
+    kms_per_radian = 6371.0088  # 地球半径
     epsilon = 10 / kms_per_radian
     for mobile in mobiles:
         # coords = df[df['mobile'] == 18601318215][['raw_longitude', 'raw_latitude']]
@@ -72,13 +72,13 @@ def load_data():
         clusters = [coords[cluster_labels == n] for n in range(num_clusters)]
         clusters = pd.Series(clusters)
         centermost_points = clusters.map(get_centermost_point)
-        for index,value in enumerate(df[df['mobile'] == mobile].index):
+        for index, value in enumerate(df[df['mobile'] == mobile].index):
             label = cluster_labels[index]
             longitude, latitude = centermost_points[label]
             # df['mobile'].loc[0]
             df.loc[value, 'latitude'] = latitude
             df.loc[value, 'longitude'] = longitude
-    df.to_csv('/home/jinwei/data/mobile/record.data',index=False,header=False)
+    df.to_csv('/home/jinwei/data/mobile/record.data', index=False, header=False)
     # client = HiveClient(db_host='172.168.1.101', port=10000, database='operator', user='hdfs', password='hdfs',
     #                     authMechanism='PLAIN')
     # client.execute("load data inpath '/data/record.dat' overwrite into table operator.call_record_raw")
