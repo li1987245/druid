@@ -10,7 +10,7 @@ features = data['data']
 feature_names = data['feature_names']
 target = data['target']
 plt.title(u'鸢尾花数据')
-for t,marker,c in zip(xrange(3),'>oX','rgb'):
+for t,marker,c in zip(range(3),'>oX','rgb'):
     plt.scatter(features[target==t,0],features[target==t,1],marker=marker,c=c)
 plt.grid()
 plt.show()
