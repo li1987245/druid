@@ -1,8 +1,22 @@
 # coding=utf-8
+import logging
+
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
+
+default_encoding = 'utf-8'
+if sys.getdefaultencoding() != default_encoding:
+    reload(sys)
+    sys.setdefaultencoding(default_encoding)
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+formatter = logging.Formatter('%(name)-12s %(asctime)s %(levelname)-8s %(message)s', '%a, %d %b %Y %H:%M:%S',)
 
 # 数学表达式 http://blog.csdn.net/wizardforcel/article/details/54782630
+plt.rcParams['font.sans-serif']=['SimHei'] #用来正常显示中文标签
+plt.rcParams['axes.unicode_minus']=False #用来正常显示负号
 
 Fs = 100
 f = 2
