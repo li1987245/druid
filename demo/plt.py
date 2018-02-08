@@ -15,6 +15,59 @@ logger = logging.getLogger(__name__)
 formatter = logging.Formatter('%(name)-12s %(asctime)s %(levelname)-8s %(message)s', '%a, %d %b %Y %H:%M:%S',)
 
 # 数学表达式 http://blog.csdn.net/wizardforcel/article/details/54782630
+
+
+"""
+黑体： SimHei
+
+微软雅黑： Microsoft YaHei
+
+微软正黑体： Microsoft JhengHei
+
+新宋体 ： NSimSun
+
+新细明体 ： PMingLiU
+
+细明体 ： MingLiU
+
+标楷体 ： DFKai-SB
+
+仿宋 ： FangSong
+
+楷体 ： KaiTi
+
+仿宋_GB2312： FangSong_GB2312
+
+楷体_GB2312： KaiTi_GB2312
+
+隶书：LiSu
+
+幼圆：YouYuan
+
+华文细黑：STXihei
+
+华文楷体：STKaiti
+
+华文宋体：STSong
+
+华文中宋：STZhongsong
+
+华文仿宋：STFangsong
+
+方正舒体：FZShuTi
+
+方正姚体：FZYaoti
+
+华文彩云：STCaiyun
+
+华文琥珀：STHupo
+
+华文隶书：STLiti
+
+华文行楷：STXingkai
+
+华文新魏：STXinwei
+"""
 plt.rcParams['font.sans-serif']=['SimHei'] #用来正常显示中文标签
 plt.rcParams['axes.unicode_minus']=False #用来正常显示负号
 
