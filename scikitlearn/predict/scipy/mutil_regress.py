@@ -1,92 +1,108 @@
 # coding=utf-8
-##最小二乘法
+
 import numpy as np
-import matplotlib.pyplot as plt
-import sys
-from scipy.optimize import leastsq
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-
-default_encoding = 'utf-8'
-if sys.getdefaultencoding() != default_encoding:
-    reload(sys)
-    sys.setdefaultencoding(default_encoding)
+import matplotlib.pyplot as plt
 
 
-f = lambda x: x ** 3 + np.power(1.1, x) + 10
+# def load_data():
+#     df = pd.read_csv(r'/home/ljw/PycharmProjects/druid/scikitlearn/predict/scipy/ex1data2.csv'
+#                      ,header=None)
+#     scaler = StandardScaler()
+#     X = scaler.fit_transform(df[[0,1]].values)
+#     y = df[2].values
+#     X_train,y_train,X_test,y_test = train_test_split(X,y)
+#     return X_train,y_train,X_test,y_test
+
+def load_exdata(filename):
+    data = []
+    with open(filename, 'r') as f:
+        for line in f.readlines():
+            line = line.split(',')
+            current = [int(item) for item in line]
+            # 5.5277,9.1302
+            data.append(current)
+    return data
+
+# 特征缩放
+def featureNormalize(X):
+    X_norm = X;
+    mu = np.zeros((1, X.shape[1]))
+    sigma = np.zeros((1, X.shape[1]))
+    for i in range(X.shape[1]):
+        mu[0, i] = np.mean(X[:, i])  # 均值
+        sigma[0, i] = np.std(X[:, i])  # 标准差
+    #     print(mu)
+    #     print(sigma)
+    X_norm = (X - mu) / sigma
+    return X_norm, mu, sigma
 
 
-def generate_data():
-    X = np.arange(0, 100, 5)
-    y = f(X)
-    return X, y
+# 计算损失
+def computeCost(X, y, theta):
+    m = y.shape[0]
+    #     J = (np.sum((X.dot(theta) - y)**2)) / (2*m)
+    C = X.dot(theta) - y
+    J2 = (C.T.dot(C)) / (2 * m)
+    return J2
 
 
-X, y = generate_data()
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4)
+# 梯度下降
+def gradientDescent(X, y, theta, alpha, num_iters):
+    m = y.shape[0]
+    # print(m)
+    # 存储历史误差
+    J_history = np.zeros((num_iters, 1))
+    for iter in range(num_iters):
+        # 对J求导，得到 alpha/m * (WX - Y)*x(i)， (3,m)*(m,1)  X (m,3)*(3,1) = (m,1)
+        theta = theta - (alpha / m) * (X.T.dot(X.dot(theta) - y))
+        J_history[iter] = computeCost(X, y, theta)
+    return J_history, theta
 
-plt.scatter(X_train, y_train, color="green", label=u"样本数据", linewidth=2)
-z = np.polyfit(X_train, y_train, 2)
-print(z)
-f2 = np.poly1d(z)
-# 画拟合直线
-x = np.linspace(0, 100, 100)  ##在0-15直接画100个连续点
-y = f2(x)
-plt.plot(x, y, '--', color="red", label=u"拟合直线", linewidth=2)
-# plt.plot(X_train,y_train,'+',X_train, y_train, '-',X_train, y_result,'--')
-plt.show()
-
-'''
-    设定拟合函数和偏差函数
-    函数的形状确定过程：
-    1.先画样本图像
-    2.根据样本图像大致形状确定函数形式(直线、抛物线、正弦余弦等)
-'''
+def predict(data):
+    testx = np.array(data)
+    testx = ((testx - mu) / sigma)
+    testx = np.hstack([testx,np.ones((testx.shape[0], 1))])
+    price = testx.dot(theta)
+    print('price is %d ' % (price))
 
 
-##需要拟合的函数func :指定函数的形状
-def func(p, x):
-    a, b, c = p
-    return np.power(x, a) + np.power(b, x) + c
 
+if __name__ == '__main__':
+    data = load_exdata('/home/ljw/PycharmProjects/druid/scikitlearn/predict/scipy/ex1data2.csv');
+    data = np.array(data, np.int64)
 
-##偏差函数：x,y都是列表:这里的x,y更上面的Xi,Yi中是一一对应的
-def error(p, x, y):
-    return func(p, x) - y
+    x = data[:, (0, 1)].reshape((-1, 2))
+    y = data[:, 2].reshape((-1, 1))
+    m = y.shape[0]
 
+    # Print out some data points
+    print('First 10 examples from the dataset: \n')
+    print(' x = ', x[range(10), :], '\ny=', y[range(10), :])
+    iterations = 10000  # 迭代次数
+    alpha = 0.01  # 学习率
+    x = data[:, (0, 1)].reshape((-1, 2))
+    y = data[:, 2].reshape((-1, 1))
+    m = y.shape[0]
+    x, mu, sigma = featureNormalize(x)
+    X = np.hstack([x, np.ones((x.shape[0], 1))])
+    # X = X[range(2),:]
+    # y = y[range(2),:]
 
-'''
-    主要部分：附带部分说明
-    1.leastsq函数的返回值tuple，第一个元素是求解结果，第二个是求解的代价值(个人理解)
-    2.官网的原话（第二个值）：Value of the cost function at the solution
-    3.实例：Para=>(array([ 0.61349535,  1.79409255]), 3)
-    4.返回值元组中第一个值的数量跟需要求解的参数的数量一致
-'''
+    theta = np.zeros((3, 1))
 
-# k,b的初始值，可以任意设定,经过几次试验，发现p0的值会影响cost的值：Para[1]
-p0 = [1, 1, 1]
+    j = computeCost(X, y, theta)
+    J_history, theta = gradientDescent(X, y, theta, alpha, iterations)
 
-# 把error函数中除了p0以外的参数打包到args中(使用要求)
-Para = leastsq(error, p0, args=(X_train, y_train))
+    print('Theta found by gradient descent', theta)
 
-# 读取结果
-a, b, c = Para[0]
-print("a=", a, "b=", b, "c=", c)
-print("cost：" + str(Para[1]))
-print("求解的拟合直线为:")
-print("y=x**" + str(round(a, 2)) + "+" + str(round(b, 2)) + "**x+" + str(c))
+    plt.plot(J_history)
 
-'''
-   绘图，看拟合效果.
-'''
-plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
-plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
-# 画样本点
-plt.figure(figsize=(8, 6))  ##指定图像比例： 8：6
-plt.scatter(X_train, y_train, color="green", label=u"样本数据", linewidth=2)
+    plt.ylabel('lost');
 
-# 画拟合直线
-x = np.linspace(0, 100, 100)  ##在0-15直接画100个连续点
-y = np.power(x, a) + np.power(b, x) + c  ##函数式
-plt.plot(x, y, color="red", label=u"拟合直线", linewidth=2)
-plt.legend()  # 绘制图例
-plt.show()
+    plt.xlabel('iter count')
+
+    plt.title('convergence graph')
+    plt.show()

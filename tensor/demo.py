@@ -5,16 +5,9 @@ import pandas as pd
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_val_score, GridSearchCV
-from xgboost.sklearn import XGBClassifier
+from tensorflow.examples.tutorials.mnist import input_data
 
 
-# hello = tf.constant('Hello, TensorFlow!')
-# sess = tf.Session()
-# print(sess.run(hello))
+mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
 
-def load_data():
-    train = pd.read_csv(r'F:\data\titanic\train.csv')
-    return X_train,y_train
 
-if __name__ =='__main__':
-    X_train, y_train, X_test = load_data()

@@ -5,10 +5,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-default_encoding = 'utf-8'
-if sys.getdefaultencoding() != default_encoding:
-    reload(sys)
-    sys.setdefaultencoding(default_encoding)
+# default_encoding = 'utf-8'
+# if sys.getdefaultencoding() != default_encoding:
+#     reload(sys)
+#     sys.setdefaultencoding(default_encoding)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
