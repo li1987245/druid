@@ -201,7 +201,7 @@ def generate_data():
     #104.7685,29.319845 自贡市华商国际城
     #104.79581,29.316842 自贡市恒大都会
     for month in range(7, 13):
-        for x in xrange(2000):
+        for x in xrange(6000):
             business_code = ''
             business_name = ''
             count = random.randint(10, 30)
@@ -251,19 +251,19 @@ def clean_data():
     lst = []
     # 使用cursor()方法获取操作游标
     cursor = db.cursor()
-    cursor.execute("truncate table business_circles")
-    db.commit()
-    try:
-        # 执行sql语句
-        cursor.execute(r"insert into business_circles (province,city, business_code, business_name, lng,lat,count,"
-                       r"`month`) select '510000','510100',business_code,business_name,lng,lat,sum(count),"
-                       r"business_circle.`month` from business_circle group by business_circle.business_name,"
-                       r"business_circle.lat,business_circle.lng,business_circle.`month`")
-        # 提交到数据库执行
-        db.commit()
-    except:
-        # 发生错误时回滚
-        db.rollback()
+    # cursor.execute("truncate table business_circles")
+    # db.commit()
+    # try:
+    #     # 执行sql语句
+    #     cursor.execute(r"insert into business_circles (province,city, business_code, business_name, lng,lat,count,"
+    #                    r"`month`) select '510000','510100',business_code,business_name,lng,lat,sum(count),"
+    #                    r"business_circle.`month` from business_circle group by business_circle.business_name,"
+    #                    r"business_circle.lat,business_circle.lng,business_circle.`month`")
+    #     # 提交到数据库执行
+    #     db.commit()
+    # except:
+    #     # 发生错误时回滚
+    #     db.rollback()
     try:
         # 执行SQL语句
         cursor.execute("select distinct lng,lat from business_circles")
@@ -298,5 +298,5 @@ def clean_data():
 if __name__ == '__main__':
     # save()
     # 6个月数据
-    # generate_data()
+    generate_data()
     clean_data()
