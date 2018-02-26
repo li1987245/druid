@@ -1,5 +1,5 @@
 # coding=utf-8
-##最小二乘法
+##最小二乘法 29526-25450-1376
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
