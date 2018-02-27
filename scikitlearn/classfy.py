@@ -2,7 +2,7 @@
 from __future__ import division, print_function
 import numpy as np
 
-a = np.loadtxt('/home/jinwei/data/churn.csv', skiprows=1, delimiter=',', dtype='str')
+a = np.loadtxt('churn.csv', skiprows=1, delimiter=',', dtype='str')
 # 根据最后元素分类
 y = np.where(a[..., -1] == 'True.', 1, 0)
 
@@ -57,6 +57,7 @@ print('SVM未作归一化误差结果：%s' % str(error))
 from sklearn import preprocessing
 
 clf = svm.SVC(C=3.0)
+# z-score 可以使用StandardScaler对训练集进行训练，使用同样的标准对测试集进行标准化
 X_train = preprocessing.scale(X_train)
 X_test = preprocessing.scale(X_test)
 clf.fit(X_train, y_train)
