@@ -11,7 +11,7 @@ export JAVA_HOME=/opt/java/jdk1.8.0_121
 # Scala目录
 export SCALA_HOME=/usr/local/scala/scala-2.11.8
 # Master IP地址
-export SPARK_MASTER_IP=localhost
+export SPARK_MASTER_IP=master
 # Worker运行内存
 export SPARK_WORKER_MEMORY=2G
 # hadoop配置文件目录 cdh中默认是如下目录 这个hadoop必须运行在yarn上 spark才能直接通过此配置文件目录通过yarn进行调度
@@ -22,6 +22,74 @@ export SPARK_MASTER_PORT=7077
 export MASTER=spark://${SPARK_MASTER_IP}:${SPARK_MASTER_PORT}
 # spark 1.6开启ipython
 export IPYTHON=1
+# 如果使用spark without hadoop 需要制定hadoop
+export SPARK_DIST_CLASSPATH=$(/opt/hadoop-3.2.0/bin/hadoop classpath)
+```
+vim conf/spark-default.conf
+```
+spark.eventLog.enabled=true
+spark.eventLog.compress=true
+spark.eventLog.dir=hdfs://master:9000/tmp/logs/spark
+spark.history.fs.logDirectory=hdfs://master:9000/tmp/logs/spark
+spark.yarn.historyServer.address=master:18080
+```
+- spark on hive
+1. vim $SPARK_HOME/conf/hive-site.xml
+```
+<configuration>  
+<property>  
+    <name>hive.metastore.uris</name>  
+    <value>thrift://master:9083</value>  
+    <description>Thrift URI for the remote metastore. Used by metastore client to connect to remote metastore.</description>  
+  </property>  
+<!--Thrift JDBC/ODBC server-->
+   <property>
+       <name>hive.server2.thrift.min.worker.threads</name>
+       <value>5</value>
+   </property>
+   <property>
+       <name>hive.server2.thrift.max.worker.threads</name>
+       <value>500</value>
+   </property>
+   <property>
+       <name>hive.server2.thrift.port</name>
+       <value>10000</value>
+   </property>
+   <property>
+       <name>hive.server2.thrift.bind.host</name>
+       <value>master</value>
+   </property>
+</configuration>
+```
+2. 启动spark thriftserver
+```
+./start-thriftserver.sh --hiveconf hive.server2.thrift.port=10000 \
+    --master yarn \
+    --driver-class-path /data/spark-2.2.0-bin-hadoop2.7/jars/mysql-connector-java-5.1.43-bin.jar \
+    --driver-memory 512m \
+    --executor-memory 512m \
+    --executor-cores 1
+```
+3. 连接spark
+```
+./beeline -u jdbc:hive2://172.168.108.6:10000 -n root
+```
+- 启动日志
+```
+sbin/start-history-server.sh
+sbin/stop-history-server.sh
+```
+- 运行
+```
+./bin/spark-submit --class org.apache.spark.examples.SparkPi \
+    --master yarn \
+    --deploy-mode cluster \
+    --driver-memory 512m \
+    --executor-memory 512m \
+    --executor-cores 1 \
+    examples/jars/spark-examples*.jar \
+    10
+spark-shell --master yarn  --driver-memory 512m --executor-memory 512m
 ```
 
 hive with spark
@@ -244,7 +312,11 @@ hadoop fs -mkdir -p hdfs:///tmp/spark/lib_jars/
 hadoop fs -put  $SPARK_HOME/jars/* hdfs:///tmp/spark/lib_jars/
 vim $SPARK_HOME/conf/spark-defaults.conf
 添加spark.yarn.jars hdfs:///tmp/spark/lib_jars/*.jar
-
+3. executor-memory计算
+val executorMem = args.executorMemory + executorMemoryOverhead
+executorMem= X+max(X*0.1,384) X为--executor-memory指定值
+4. Exit code: 13 Error file: prelaunch.err
+一般情况在Error file: prelaunch.err后面会跟着具体的错误原因，但是当driver-memory和executor-memory过小时，会导致AM启动不了，导致无具体错误原因
 ```
 
 

@@ -22,7 +22,7 @@ def timerit(t):
         @wraps(function)
         def wrapper(*args, **kwargs):
             t0 = time.time()
-            for x in xrange(t):
+            for x in range(t):
                 result = function(*args, **kwargs)
             t1 = time.time()
             print ("%s  Total time running: %s seconds,avg time: %s seconds" %

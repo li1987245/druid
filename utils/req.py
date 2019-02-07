@@ -1,7 +1,8 @@
 # coding: utf-8
-import urllib2
 import json
 import uuid
+
+import urllib2
 
 
 class Job():

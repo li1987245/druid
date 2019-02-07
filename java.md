@@ -49,6 +49,12 @@ public class Test {
 }
 ```
 
+2. GC overhead limit exceeded
+```
+是JDK6新添的错误类型。是发生在GC占用大量时间为释放很小空间的时候发生的，是一种保护机制,超过98%的时间用来做GC并且回收了不到2%的堆内存时会抛出此异常
+解决方案：通过加大内存或排除代码问题（死循环等）
+```
+
 - mybatis
 ```
 mybatis结果映射 BeanWrapper.instantiatePropertyValue->DefaultResultSetHandler.applyAutomaticMappings->BaseTypeHandler.getResult->具体的TypeHandler.getResult
