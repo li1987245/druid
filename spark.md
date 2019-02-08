@@ -63,16 +63,15 @@ spark.yarn.historyServer.address=master:18080
 ```
 2. 启动spark thriftserver
 ```
-./start-thriftserver.sh --hiveconf hive.server2.thrift.port=10000 \
-    --master yarn \
-    --driver-class-path /data/spark-2.2.0-bin-hadoop2.7/jars/mysql-connector-java-5.1.43-bin.jar \
+sbin/start-thriftserver.sh --master yarn \
+    --driver-class-path /opt/hive-3.1.1/lib/* \
     --driver-memory 512m \
     --executor-memory 512m \
     --executor-cores 1
 ```
 3. 连接spark
 ```
-./beeline -u jdbc:hive2://172.168.108.6:10000 -n root
+bin/beeline -u jdbc:hive2://master:10000 -n root
 ```
 - 启动日志
 ```
@@ -81,7 +80,7 @@ sbin/stop-history-server.sh
 ```
 - 运行
 ```
-./bin/spark-submit --class org.apache.spark.examples.SparkPi \
+spark-submit --class org.apache.spark.examples.SparkPi \
     --master yarn \
     --deploy-mode cluster \
     --driver-memory 512m \

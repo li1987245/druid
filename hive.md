@@ -35,12 +35,57 @@
 ```
 - metastore启动
 ```
-hive --service metastore
+hive --service metastore &
 ```
 - hiveserver2启动
 ```
 $HIVE_HOME/bin/hiveserver2
 $HIVE_HOME/bin/hive --service hiveserver2
+```
+- hive on spark
+```
+https://cwiki.apache.org/confluence/display/Hive/Hive+on+Spark%3A+Getting+Started
+```
+1. 下载hive对应spark
+```
+hive3.1.1对应spark2.3
+下载spark-without-hadoop，或源码编译
+```
+2. 拷贝spark jar包到hive lib
+```
+ln -s /opt/spark-2.3.2/jars/scala-library-2.11.8.jar /opt/hive-3.1.1/lib/
+ln -s /opt/spark-2.3.2/jars/spark-core_2.11-2.3.2.jar /opt/hive-3.1.1/lib/
+ln -s /opt/spark-2.3.2/jars/spark-network-common_2.11-2.3.2.jar /opt/hive-3.1.1/lib/
+```
+3. vim $HIVE_HOME/conf/spark-defaults.conf
+```
+spark.master yarn
+spark.submit.deployMode client
+spark.eventLog.enabled true
+spark.eventLog.dir hdfs://master:9000/tmp/logs/spark
+
+spark.driver.memory 512m
+spark.driver.cores 1
+spark.executor.memory 512m
+spark.executor.cores 1
+spark.serializer org.apache.spark.serializer.KryoSerializer
+spark.yarn.jars hdfs://master:9000/tmp/spark/lib_jars/*.jar
+```
+4. vim $HIVE_HOME/conf/hive-site.xml
+```
+<property>
+  <name>spark.yarn.jars</name>
+  <value>hdfs://master:9000/tmp/spark/lib_jars/*.jar</value>
+</property>
+<property>
+  <name>hive.execution.engine</name>
+  <value>spark</value>
+</property>
+
+<property>
+  <name>hive.enable.spark.execution.engine</name>
+  <value>true</value>
+</property>
 ```
 
 # HIVE
