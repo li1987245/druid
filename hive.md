@@ -32,6 +32,94 @@
  <description>A comma separated list of metastore uris on which metastore service       is running
 </description>
 </property>
+<!--hiveserver2配置-->
+<property>
+    <name>hive.metastore.event.db.notification.api.auth</name>
+    <value>false</value>
+    <description>
+      Should metastore do authorization against database notification related APIs such as get_next_notification.
+      If set to true, then only the superusers in proxy settings have the permission
+    </description>
+  </property>
+<property>
+<name>hive.server2.zookeeper.namespace</name>
+<value>hiveserver2</value>
+<description>The parent node in ZooKeeper used by HiveServer2 when supporting dynamic service discovery.</description>
+</property>
+<property>
+<name>hive.zookeeper.quorum</name>
+<value>host1:2181,host1:2181,host1:2181,host1:2181,host1:2181</value>
+<description>
+</description>
+</property>
+<property>
+<name>hive.zookeeper.client.port</name>
+<value>2181</value>
+<description>
+</description>
+</property>
+<property>
+<name>hive.server2.transport.mode</name>
+<value>binary</value>
+<description>
+  Expects one of [binary, http].
+  Transport mode of HiveServer2.
+</description>
+</property>
+<property>
+<name>hive.server2.thrift.port</name>
+<value>10000</value>
+</property>
+<property>
+<name>hive.server2.thrift.bind.host</name>
+<value>0.0.0.0</value>
+</property>
+<property>
+<name>hive.server2.enable.doAs</name>
+<value>false</value>
+</property>
+<property>
+    <name>hive.server2.thrift.client.user</name>
+    <value>anonymous</value>
+    <description>Username to use against thrift client</description>
+  </property>
+  <property>
+    <name>hive.server2.thrift.client.password</name>
+    <value>anonymous</value>
+    <description>Password to use against thrift client</description>
+  </property>
+<property>
+<name>hive.server2.session.check.interval</name>
+<value>900000</value>
+</property>
+<property>
+<name>hive.server2.idle.session.timeout</name>
+<value>43200000</value>
+</property>
+<property>
+<name>hive.server2.idle.session.timeout_check_operation</name>
+<value>true</value>
+</property>
+<property>
+<name>hive.server2.idle.operation.timeout</name>
+<value>21600000</value>
+</property>
+<property>
+<name>hive.server2.webui.host</name>
+<value>0.0.0.0</value>
+</property>
+<property>
+<name>hive.server2.webui.port</name>
+<value>10002</value>
+</property>
+<property>
+<name>hive.server2.webui.max.threads</name>
+<value>50</value>
+</property>
+<property>
+<name>hive.server2.webui.use.ssl</name>
+<value>false</value>
+</property>
 ```
 - metastore启动
 ```
@@ -40,7 +128,8 @@ hive --service metastore &
 - hiveserver2启动
 ```
 $HIVE_HOME/bin/hiveserver2
-$HIVE_HOME/bin/hive --service hiveserver2
+nohup $HIVE_HOME/bin/hive --service hiveserver2 &
+beeline -u jdbc:hive2://master:10000 -n root -p admin
 ```
 - hive on spark
 ```
@@ -48,7 +137,7 @@ https://cwiki.apache.org/confluence/display/Hive/Hive+on+Spark%3A+Getting+Starte
 ```
 1. 下载hive对应spark
 ```
-hive3.1.1对应spark2.3
+hive3.1.1对应spark2.3.2
 下载spark-without-hadoop，或源码编译
 ```
 2. 拷贝spark jar包到hive lib

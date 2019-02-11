@@ -880,6 +880,8 @@ source /etc/profile
     9.常见命令
          ####启动/关闭yarn jobhistory记录####
          web: //namenode:19888  //其中namenode 为集群任意节点主机名
+         8088 yarn的web界面
+         10002 hiveserver2的web界面
          mr-jobhistory-daemon.sh start historyserver  //集群中每台主机执行一次
          mr-jobhistory-daemon.sh stop historyserver
          
