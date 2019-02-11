@@ -130,6 +130,7 @@ hive --service metastore &
 $HIVE_HOME/bin/hiveserver2
 nohup $HIVE_HOME/bin/hive --service hiveserver2 &
 beeline -u jdbc:hive2://master:10000 -n root -p admin
+10002 hiveserver2的web界面
 ```
 - hive on spark
 ```

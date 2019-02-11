@@ -880,10 +880,8 @@ source /etc/profile
     9.常见命令
          ####启动/关闭yarn jobhistory记录####
          web: //namenode:19888  //其中namenode 为集群任意节点主机名
-         8088 yarn的web界面
-         10002 hiveserver2的web界面
-         mr-jobhistory-daemon.sh start historyserver  //集群中每台主机执行一次
-         mr-jobhistory-daemon.sh stop historyserver
+         mapred --daemon start historyserver  //集群中每台主机执行一次
+         mapred --daemon stop historyserver
          
          ####启动/关闭/查看 zk#####
          zkServer.sh start    //集群中每台主机执行一次
@@ -896,7 +894,7 @@ source /etc/profile
          yarn-daemon.sh stop nodemanager
          yarn rmadmin -getServiceState rm2  //其中rm2是集群配置的别名
          
-         web: //namenode:8088  //其中namenode是active状态的主机名
+         web: //namenode:8088  //yarn的web界面,其中namenode是active状态的主机名
          
          ####启动/关闭/查看 hadoop####
          hadoop-daemon.sh start namenode
