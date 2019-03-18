@@ -316,6 +316,19 @@ val executorMem = args.executorMemory + executorMemoryOverhead
 executorMem= X+max(X*0.1,384) X为--executor-memory指定值
 4. Exit code: 13 Error file: prelaunch.err
 一般情况在Error file: prelaunch.err后面会跟着具体的错误原因，但是当driver-memory和executor-memory过小时，会导致AM启动不了，导致无具体错误原因
+5. org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl: application_1548991065083_2977 State change from FINAL_SAVING to FAILED
+nodemanage日志Exception from container-launch with container ID: container_1548991065083_2977_01_000001 and exit code: 1
+yarn logs -applicationId application_1548991065083_2977 查看yarn日志，分析具体原因
+ln -snf /opt/jdk1.8.0_181/ /opt/java
+6. yarn指定队列不生效
+Fair调度器采用了一套基于规则的系统来确定应用应该放到哪个队列。在上面的例子中，<queuePlacementPolicy> 元素定义了一个规则列表，其中的每个规则会被逐个尝试直到匹配成功。例如，上例第一个规则specified，则会把应用放到它指定的队列中，若这个应用没有指定队列名或队列名不存在，则说明不匹配这个规则，然后尝试下一个规则。primaryGroup规则会尝试把应用放在以用户所在的Unix组名命名的队列中，如果没有这个队列，不创建队列转而尝试下一个规则。当前面所有规则不满足时，则触发default规则，把应用放在dev.eng队列中。
+
+当然，我们可以不配置queuePlacementPolicy规则，调度器则默认采用如下规则：
+
+<queuePlacementPolicy>
+<rule name="specified" />
+<rule name="user" />
+</queuePlacementPolicy>
 ```
 
 
