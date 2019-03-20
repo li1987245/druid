@@ -8,4 +8,4 @@ def contain(str_a,str_b):
     return True
 
 if __name__ == '__main__':
-    print contain('AEBDC','DE')
+    print(contain('AEBDC','DE'))

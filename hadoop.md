@@ -161,8 +161,43 @@ source /etc/profile
                 <name>ha.zookeeper.quorum</name>
                 <value>hadoop.master:2181,hadoop.slaver1:2181,hadoop.slaver2:2181</value>
             </property>
+            <!--开启用户权限，hadoop.security.authentication默认是simple，hadoop-policy.xml设置各种服务对应的可登陆的用户和组，采用类linux文件权限-->
+            <property>
+                <name>hadoop.security.authorization</name>
+                <value>true</value>
+            </property>
+            <property>
+                <name>hadoop.security.authentication</name>
+                <value>simple</value>
+            </property>
+            <!--设置用户组默认权限-->
+            <property>
+                 <name>fs.permissions.umask-mode</name>
+                 <value>022</value>
+            </property>
+            <!--解决权限拒绝-->
+            <property>
+                <name>hadoop.proxyuser.hadoop.hosts</name>
+                <value>*</value>
+           </property>
+           <property>
+                <name>hadoop.proxyuser.hadoop.groups</name>
+                <value>*</value>
+           </property>
+            <!--开启回收站trash，默认是0，回收站关闭，单位是分钟-->
+            <property>
+            <name>fs.trash.interval</name>
+            <value>1440</value>
+            <description>Number of minutes between trash checkpoints.
+            If zero, the trash feature is disabled.
+            </description>
+            </property>
+            <!--配置机架感知-->
+            <property>
+                <name>topology.script.file.name</name>
+                <value>脚本</value>
+           </property>
             </configuration>
-            
             ####hadoop-env.sh####
             export JAVA_HOME=/usr/java/jdk1.8.0_65
             export HADOOP_CLASSPATH=.:$HADOOP_CLASSPATH:$HADOOP_HOME/bin
@@ -203,15 +238,18 @@ source /etc/profile
             <name>dfs.replication</name>
             <value>3</value>
             </property>
-
+            <!--acl权限-->
             <property>
-            <name>dfs.permissions</name>
-            <value>false</value>
+                  <name>dfs.permissions.enabled</name>
+                  <value>true</value> //默认值为true，即启用权限检查。如果为 false，则禁用
             </property>
-
             <property>
-            <name>dfs.permissions.enabled</name>
-            <value>false</value>
+                 <name>dfs.namenode.acls.enabled</name>
+                 <value>true</value> //默认值为false，禁用ACL，设置为true则启用ACL。当ACL被禁用时，NameNode拒绝设置或者获取ACL的请求
+            </property>
+            <property>
+                 <name>dfs.permissions.superusergroup</name>
+                 <value>supergroup</value> //超级用户的组名称，默认为supergroup
             </property>
 
             <property>
@@ -1064,4 +1102,52 @@ ll |grep blk_1073988305
 ll |grep blk_1073988322 #文件路径删除再创建后block id修改
 -rw-r--r--. 1 hdfs hadoop   2438266 1月  16 15:45 blk_1073988322
 -rw-r--r--. 1 hdfs hadoop     19059 1月  16 15:45 blk_1073988322_251229.meta
+```
+脆弱性测试
+
+### hadoop各版本特性
+- 2.4
+```
+支持HDFS中的访问控制列表
+*原生支持HDFS滚动升级
+使用协议缓冲区进行HDFS FSImage，以实现平稳的操作升级
+在HDFS中完成HTTPS支持
+支持YARN ResourceManager的自动故障转移
+使用Application History Server和Application Timeline Server对YARN上新应用程序的增强支持
+通过Preemption支持YARN CapacityScheduler中的强大SLA
+```
+- 2.5
+```
+使用HTTP代理服务器时的身份验证改进。
+新的Hadoop Metrics接收器，允许直接写入Graphite。
+Hadoop兼容文件系统工作规范。
+支持POSIX样式的文件系统扩展属性。
+OfflineImageViewer通过WebHDFS API浏览fsimage。
+NFS网关的可支持性改进和错误修复。
+美化HDFS daemon Web UI（HTML5和Javascript）。
+*YARN的REST API支持提交和终止应用程序。
+YARN时间轴存储的Kerberos集成。
+*FairScheduler允许在任何指定的父队列下在运行时创建用户队列。
+```
+- 2.6
+```
+Apache Hadoop 2.6.0 contains a number of significant enhancements
+
+
+```
+
+- 常用操作
+```
+hdfs  haadmin -getServiceState  nn1
+hdfs  haadmin -failover --forcefence --forceactive  nn2  nn1 #此处“nn2  nn1”的顺序表示active状态由nn2转换到nn1上（虽然nn2在转化前也是standby状态）。
+hadoop-daemon.sh   start|stop        namenode|datanode| journalnode
+yarn-daemon.sh         start |stop       resourcemanager|nodemanager
+hdfs fsck
+
+yarn  application -list -appStates RUNNING
+yarn  application -kill applicationID # hadoop job -kill
+yarn  application -status applicationID
+yarn  application -movetoqueue applicationID -queue other
+yarn rmadmin -refreshQueues
+yarn rmadmin -refreshUserToGroupsMappings
 ```
