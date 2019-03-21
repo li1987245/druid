@@ -1,0 +1,133 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+</HEAD>
+
+<BODY>
+
+<div id="report">
+
+</div>
+<br>
+<input type="button" value="create" onclick="create()">
+
+<script>
+
+function create()
+{
+	var datas = [
+	['P1001','ipad','京东','100'],
+    ['P1001','ipad','苏宁','101'],
+    ['P1002','touch','国美','102'],
+	['P1003','iphone','国美','103'],
+	['P1003','iphone','当当','103'],
+	['P1001','touch','京东','100'],
+	['P1001','ipad','亚马逊','100'],
+	['P1001','ipad','国美','100'],
+	['P1001','ipad','当当','100'],
+	['P1001','ipad','库巴','100']
+	];
+	var row = 0;
+    var col = 0;
+    var col1s = [];
+
+	var count = datas.length;
+	var pos = new Array(count);  //3
+    var rowName = [];
+
+	for(i = 0; i < count ; i++)
+    {
+        var data = datas[i];
+
+        pos[i] = new Object();
+        pos[i].row = -1;
+        pos[i].col = -1;
+
+        pos[i].value = data[3];
+
+        for(j = 0 ; j < rowName.length; j ++)
+        {
+
+            if(rowName[j] == data[0]+"_"+data[1])
+            {
+                pos[i].row = j;
+                break;
+            }
+        }
+
+        if(pos[i].row == -1)
+        {
+            pos[i].row = rowName.length;
+            rowName.push(data[0]+"_"+data[1]);
+        }
+        var col1 = '';
+
+        for(j = 0 ; j < col1s.length; j ++)
+        {
+            if(col1s[j].name == data[2])
+            {
+                col1 = col1s[j];
+				col1.index.push(i);
+                break;
+            }
+        }
+
+        if(col1 == '')
+        {
+            col1 = new Object();
+            col1.name = data[2];
+            col1.index = [];
+            col1.index.push(i);
+
+            col1.col = 0;
+            col1s.push(col1);
+
+			col ++;
+        }
+	}
+
+    //alert(col1s[0]);
+    //alert(col1s[0].col);
+    var tr = '<tr><td>' + '  ' + '</td>'+ '<td>' + '  ' + '</td>';
+    var ind = 0;
+    for(j = 0 ; j < col1s.length; j ++)
+    {
+        tr += '<td align="center">' + col1s[j].name + '</td>' ;
+                var indexs = col1s[j].index;
+                for(var l = 0; l < indexs.length; l ++)
+                {
+                    pos[indexs[l]].col = ind;
+                }
+                ind ++;
+    }
+
+    tr += '</tr>';
+    var erow = rowName.length;
+    //alert(erow);
+    for(k = 0; k < erow ; k ++)
+    {
+        tr += '<tr><td>' + rowName[k] + '</td>'+ '<td>' +rowName[k] + '</td>';
+        for(j = 0 ; j < col; j ++)
+        {
+            tr += '<td>' + '  ' + '</td>' ;
+        }//alert(col);
+    tr += '</tr>';
+    }
+    report.innerHTML = '<table id="rep" align="center" border=1>' + tr + '</table>';
+    //alert(report.innerHTML);
+	//document.write(report.innerHTML);
+    for(i = 0; i < count ; i++)
+    {
+        var r = pos[i].row + 1;
+        var c = pos[i].col + 2;
+        //rep.rows[r].cells[c].innerHTML = pos[i].value;
+		rep.rows[r].cells[c].innerHTML = pos[i].value;
+		//alert(pos[i].value);
+    }
+}
+
+
+</script>
+</BODY>
+</HTML>

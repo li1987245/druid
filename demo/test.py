@@ -5,7 +5,7 @@ import random
 import time
 import numpy as np
 import pandas as pd
-import cPickle as pickle
+import pickle
 
 from utils.performance import timerit
 
