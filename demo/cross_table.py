@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 import pickle
 
-
 # data = pd.DataFrame({'Sample': range(1, 11), 'age': ['18', '20', '18', '18', '19', '21', '19', '20', '21', '21'],
 # #                      'Gender': ['Female', 'Male', 'Female', 'Male', 'Male', 'Male', 'Female', 'Female', 'Male',
 # #                                 'Female'],
@@ -37,13 +36,14 @@ def assemble_table(rsp):
     # 列維度 key:col1_col2 value: [col1,col2]
     cols = {}
     # 指标 {"row1_row2":{"col1_col2":[value1,value2]}}
-    values = []
+    values = {}
     for column in columnList:
         idxs[column["index"]] = column
-    print("列索引:%s" % idxs)
+    # print("列索引:%s" % idxs)
     for i, record in enumerate(records):
         val_rows = []
         val_cols = []
+        vals = []
         for j, element in enumerate(record):
             # 列維
             if idxs[j].get("colType") == "cols":
@@ -82,12 +82,32 @@ def assemble_table(rsp):
                     value = Value()
                     value.name = idxs[j]
                     value.value = element
-                    # value.row = val_rows_idx
-                    # value.col = val_cols_idx
-                    values.append(value)
-    print(values)
+                    value.row = "_".join([o.name for o in val_rows])
+                    value.col = "_".join([o.name for o in val_cols])
+                    vals.append(value)
+        r = "_".join([o.name for o in val_rows])
+        c = "_".join([o.name for o in val_cols])
+        # 已经包含行
+        if r in values:
+            v = values.get(r)
+            v[c] = vals
+        else:
+            values[r] = {c: vals}
 
+    # print(values)
 
+    print(",".join(["---" for i in range(2+len(cols.keys()))]))
+    print("---,", "---,", ",".join(cols.keys()))
+    print("季度,","公司类型,",",".join(["客户数" for i in range(len(cols.keys()))]))
+    for r,v in rows.items():
+        tmp = [x.name for x in v]
+        val = values.get(r)
+        for c in cols:
+            if c in val:
+                tmp.append("".join([x.value for x in val.get(c)]))
+            else:
+                tmp.append("0")
+        print(",".join(tmp))
 
 
 rsp = {"columnList": [{"alias": "季度", "colType": "cols", "index": 0, "name": "statis_quarter"},
