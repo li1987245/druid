@@ -94,15 +94,15 @@ def assemble_table(rsp):
         else:
             values[r] = {c: vals}
 
-    # print(values)
-
-    print(",".join(["---" for i in range(2+len(cols.keys()))]))
-    print("---,", "---,", ",".join(cols.keys()))
-    print("季度,","公司类型,",",".join(["客户数" for i in range(len(cols.keys()))]))
-    for r,v in rows.items():
+            # print(values)
+    sorted_cols= sorted(cols.keys())
+    print(",".join(["---" for i in range(2 + len(cols.keys()))]))
+    print("---,", "---,", ",".join(sorted_cols))
+    print("季度,", "公司类型,", ",".join(["客户数" for i in range(len(cols.keys()))]))
+    for r, v in rows.items():
         tmp = [x.name for x in v]
         val = values.get(r)
-        for c in cols:
+        for c in sorted_cols:
             if c in val:
                 tmp.append("".join([x.value for x in val.get(c)]))
             else:
