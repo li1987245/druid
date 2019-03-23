@@ -107,7 +107,7 @@ function create()
     //alert(erow);
     for(k = 0; k < erow ; k ++)
     {
-        tr += '<tr><td>' + rowName[k] + '</td>'+ '<td>' +rowName[k] + '</td>';
+        tr += '<tr><td>' + rowName[k].split("_")[0] + '</td>'+ '<td>' +rowName[k].split("_")[1] + '</td>';
         for(j = 0 ; j < col; j ++)
         {
             tr += '<td>' + '  ' + '</td>' ;
