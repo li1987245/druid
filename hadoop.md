@@ -1,7 +1,7 @@
 # 命令
 + **scp**
 1. *拷贝本机文件到目标*  
-`scp -P 3222（ssh端口） ~/.ssh/d_rsa.pub（本机文件） root@172.24.3.108:/root/.ssh/id_rsa.pub1（目标用户名、ip、路径）`
+`scp -P 3222（ssh端口） ~/.ssh/id_rsa.pub（本机文件） root@172.24.3.108:/root/.ssh/id_rsa.pub1（目标用户名、ip、路径）`
 2. *拷贝目标文件到本机*  
 `scp -P 3222（ssh端口） root@172.24.3.108:/root/.ssh/id_rsa.pub1（目标用户名、ip、路径） ~/.ssh/d_rsa.pub（本机文件）`
 + **ssh**  
@@ -9,11 +9,19 @@
 + 
 # 操作
 + **ssh免密登录**  
-1. `ssh-keygen -t rsa -P ''`
-2. `scp -P 3222 ~/.ssh/d_rsa.pub  root@172.24.3.108:/root/.ssh/id_rsa.pub1`
-3. `ssh root@172.24.3.108 -p 3222`
-4. `cat id_rsa_01.pub >>authorized_keys`
+1. `ssh-keygen -t rsa -P '''`
+2. `ssh-copy-id -i ~/.ssh/id_rsa.pub slave1`
+3. `scp -p ~/.ssh/id_rsa.pub hadoop@slave1:/home/hadoop/.ssh/id_rsa.pub1`
+4. `cat id_rsa.pub1 >>authorized_keys`
 5. `ok`
+```
+1) .ssh目录的权限必须是700
+chmod 700 /home/hadoop/.ssh
+2) .ssh/authorized_keys文件权限必须是600
+chmod 600 /home/hadoop/.ssh/authorized_keys
+chmod g-w /home/hadoop
+cat /var/log/secure
+```
 + 
 # HADOOP
 + 安装
