@@ -1159,3 +1159,16 @@ yarn  application -movetoqueue applicationID -queue other
 yarn rmadmin -refreshQueues
 yarn rmadmin -refreshUserToGroupsMappings
 ```
+
+
+### FAQ
+1. Cannot obtain block length for LocatedBlock
+```
+Usually when you see "Cannot obtain block length for LocatedBlock", this means the file is still in being-written state, i.e., it has not been closed yet, and the reader cannot successfully identify its current length by communicating with corresponding DataNodes. There are multiple possibilities here, .e.g., there may be temporary network connection issue between the reader and the DataNodes, or the original writing failed some while ago and the under-construction replicas are somehow missing.
+
+In general you run fsck command to get more information about the file. You can also trigger lease recovery for further debugging. Run command:
+
+hdfs debug recoverLease -path <path-of-the-file> -retries <retry times>
+
+This command will ask the NameNode to try to recover the lease for the file, and based on the NameNode log you may track to detailed DataNodes to understand the states of the replicas. The command may successfully close the file if there are still healthy replicas. Otherwise we can get more internal details about the file/block state.
+```
