@@ -443,7 +443,12 @@ FAQ:
 ```
 statement_mem也必须小于队列参数MEMORY_LIMIT，大于会报错
 ```
+2. mysql导出
+```
+mysqldump -h 192.168.21.98 -udata_insight -pdata_insi1206fTNdRWmG data_insight date_dictionary  --fields-terminated-by='\t' -T ~/
 
+echo 'SELECT * FROM date_dictionary' | mysql -h 192.168.21.96 -P 3306 -B -udumper -pdumper@31nhf data_insight | sed "s/'/\'/;s/\t/\",\"/g;s/^/\"/;s/$/\"/;s/\n//g" > ~/date_dictionary.csv
+```
 
 
 

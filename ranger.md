@@ -68,4 +68,10 @@ provider.AuditProviderFactory (AuditProviderFactory.java:init(150)) - AUDIT PROP
 //ranger policy刷新日志，可以看出远程连接ranger server失败，导致无法更新策略
 ERROR util.PolicyRefresher (PolicyRefresher.java:loadPolicyfromPolicyAdmin(288)) - PolicyRefresher(serviceName=BaiRong_hadoop): failed to refresh policies. Will continue to use last known version of policies (14)
 com.sun.jersey.api.client.ClientHandlerException: java.net.UnknownHostException:
+
+
+client.RangerAdminRESTClient (RangerAdminRESTClient.java:getServicePoliciesIfUpdated(162)) - Error getting policies. secureMode=true, user=nn/hadoop002-security-namenode02@BAIRONG.CN (auth:KERBEROS), response={"httpStatusCode":401,"statusCode":0}, serviceName=BaiRong_hadoop
+需要把 policymgr_external_url (in Ambari under Ranger -> Configs -> Advanced -> Ranger Settings -> External URL) was improperly set to the Ranger hosts IP address，需要把IP换成FQDN（域名）
+curl -iv -u admin:admin -H "Content-Type: application/json" -X GET http://myhost:6080/service/public/api/policy/18
+curl -iv -u admin:admin -X GET /service/plugins/secure/policies/download/BaiRong_hadoop?lastKnownVersion=70&lastActivationTime=1558955991704&pluginId=hdfs@hadoop002-security-namenode02-BaiRong_hadoop&clusterName=BaiRong HTTP/1.1
 ```

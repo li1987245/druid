@@ -155,6 +155,10 @@ yum install krb5-workstation krb5-libs krb5-auth-dialog
 ```
 yum install openldap-clients
 ```
+11. sasl
+```
+
+```
 #### 常用命令
 ```
 kinit admin/admin@EXAMPLE.COM # 初始化证书
