@@ -1,15 +1,15 @@
 # coding=utf-8
 import csv
 import functools
+import os
+
 import requests
 import hashlib
-import cPickle
+import pickle
 import time
 import sys
 
-reload(sys)
 # 'ascii' codec can't encode characters in position 1-2: ordinal not in range(128)
-sys.setdefaultencoding('utf8')
 headers = {
     'Accept-Encoding': 'gzip, deflate',
     'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.100 Safari/537.36'
@@ -18,17 +18,18 @@ headers = {
 
 class Xueqiu():
     def __init__(self):
-        # self.cookies = self.login()
+        if not os.path.exists('cookie.pkl'):
+            self.cookies = self.login()
         self.get_cookie()
 
     def get_cookie(self):
         try:
             f = open('cookie.pkl', 'rb')
-            self.cookies = cPickle.load(f)
+            self.cookies = pickle.load(f)
             f.close()
-        except Exception, e:
+        except Exception as e:
             # self.cookies = self.login()
-            print e
+            print(e)
 
     def login(self):
         url = 'http://xueqiu.com/user/login'
@@ -42,13 +43,13 @@ class Xueqiu():
         telephone:1860198724518601987245
         '''
         md5 = hashlib.md5()
-        md5.update('qwer1234')
+        md5.update(b'qwer1234')
         password = md5.hexdigest()
         payload = {'areacode': '86', 'password': password, 'captcha': '', 'remember_me': 'on',
                    'telephone': '1860198724518601987245'}
         r = requests.post(url=url, headers=headers, data=payload)
         f = open('cookie.pkl', 'wb')
-        cPickle.dump(r.cookies, f)
+        pickle.dump(r.cookies, f)
         f.close()
         return r.cookies
 
@@ -79,6 +80,42 @@ class Xueqiu():
           "volume": "40355",成交量
           "hasexist": "false"
         }
+        {
+          'symbol': 'SH603915',股票编码
+          'net_profit_cagr': 42.232635205730396,
+          'ps': 3.9078,
+          'type': 11,
+          'percent': 43.96,涨跌幅	(今收-昨收)/昨收
+          'has_follow': False,
+          'tick_size': 0.01,
+          'pb_ttm': 3.5116,
+          'float_shares': 84380000,
+          'current': 14.9,当前价
+          'amplitude': 23.96, 振幅
+          'pcf': 25.3724,市现率
+          'current_year_percent': 43.96,年初至今	
+          'float_market_capital': 1257262000,
+          'market_capital': 6903578260,市值	
+          'dividend_yield': None,
+          'lot_size': 100,
+          'roe_ttm': 20.630646695292782,
+          'total_percent': 19.97,
+          'percent5m': 0,
+          'income_cagr': 17.07032512632447,
+          'amount': 2427569,成交额	
+          'chg': 4.55,
+          'issue_date_ts': 1560441600000,
+          'main_net_inflows': 0,
+          'volume': 163257,成交量	
+          'volume_ratio': None,股息率	
+          'pb': 3.514,
+          'followers': 976,
+          'turnover_rate': 0.19,换手率	
+          'first_percent': 43.96,
+          'name': 'N国茂',
+          'pe_ttm': 31.66,市盈率(TTM)	
+          'total_shares': 463327400
+        }
         """
         rsp = r.json()
         count = rsp.get('count').get('count')
@@ -87,10 +124,10 @@ class Xueqiu():
         lst = []
         for x in arr:
             r = requests.get(
-                'http://xueqiu.com/stock/cata/stocklist.json?page=%d&size=90&order=desc&orderby=percent&type=11,12' % page,
+                'https://xueqiu.com/service/v5/stock/screener/quote/list?page=%d&size=90&order=desc&orderby=percent&order_by=percent&market=CN&type=sh_sz' % page,
                 headers=headers, cookies=self.cookies)
             dic = r.json()
-            stocks = dic.get('stocks')
+            stocks = dic.get('data').get('list')
             lst.extend(stocks)
             page += 1
         self.save_all_stock(lst, 'stock-%s.csv' % time.strftime("%Y-%m-%d", time.localtime()))
@@ -117,7 +154,7 @@ class Xueqiu():
         for stock_id in stock_ids:
             lst = self.get_bonus(stock_id)
             if lst is None or len(lst) == 0:
-                print stock_id
+                print(stock_id)
                 continue
             path = '/home/jinwei/data/stock/%s.csv' % str(stock_id)
             with open(path, 'wb') as f:
@@ -127,7 +164,6 @@ class Xueqiu():
                 writer.writerow(keys)  # 将属性列表写入csv中
                 for stock in lst:  # 读取json数据的每一行，将values数据一次一行的写入csv中
                     writer.writerow(stock.values())
-
 
     def get_bonus(self, stock_id):
         """
@@ -168,8 +204,6 @@ class Xueqiu():
         return rsp.get('list')
 
 
-
-
 def login(regex):
     """
     标识需要登录接口
@@ -180,7 +214,7 @@ def login(regex):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kw):
-            print '%s %s():' % (regex, func.__name__)
+            print('%s %s():' % (regex, func.__name__))
             return func(*args, **kw)
 
         return wrapper
@@ -190,4 +224,5 @@ def login(regex):
 
 if __name__ == '__main__':
     xueqiu = Xueqiu()
+    xueqiu.get_all_stock()
     xueqiu.get_all_bonus()
