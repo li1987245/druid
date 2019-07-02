@@ -2,7 +2,7 @@
 ```
 mvn clean install -Dmaven.test.skip=true -Dhadoop.version=2.7.6 -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true
 ```
-- 调过错误
+- 跳过异常
 ```
 <build>
    <plugins>

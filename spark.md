@@ -32,6 +32,10 @@ spark.eventLog.compress=true
 spark.eventLog.dir=hdfs://master:9000/tmp/logs/spark
 spark.history.fs.logDirectory=hdfs://master:9000/tmp/logs/spark
 spark.yarn.historyServer.address=master:18080
+spark.history.ui.port=18080
+spark.yarn.jars=hdfs:///tmp/spark/lib_jars/*.jar
+spark.executor.memory=512m
+spark.serializer=org.apache.spark.serializer.KryoSerializer
 ```
 - spark on hive
 1. vim $SPARK_HOME/conf/hive-site.xml

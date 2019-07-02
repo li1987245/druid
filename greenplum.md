@@ -355,8 +355,8 @@ SELECT rolname, rsqname, pid, granted,
 查询数据库和表
  select datname from pg_database;
  SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';
- describe table_name;
   SELECT column_name FROM information_schema.columns WHERE table_name ='table_name';
+  pg_dump -s --table=table_name testdb > table_name.sql
 
 节点故障等历史信息
 select * from gp_configuration_history tt order by 1 desc ;
@@ -445,6 +445,12 @@ statement_mem也必须小于队列参数MEMORY_LIMIT，大于会报错
 ```
 2. mysql导出
 ```
+show variables like '%char%';
+set character_set_results = utf8;
+set character_set_client = utf8;
+set character_set_connection = utf8
+SELECT * FROM mid_acc_summary_d INTO OUTFILE "/path/to/file" FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' LINES TERMINATED BY '\n';
+
 mysqldump -h 192.168.21.98 -udata_insight -pdata_insi1206fTNdRWmG data_insight date_dictionary  --fields-terminated-by='\t' -T ~/
 
 echo 'SELECT * FROM date_dictionary' | mysql -h 192.168.21.96 -P 3306 -B -udumper -pdumper@31nhf data_insight | sed "s/'/\'/;s/\t/\",\"/g;s/^/\"/;s/$/\"/;s/\n//g" > ~/date_dictionary.csv

@@ -1111,6 +1111,15 @@ ll |grep blk_1073988322 #文件路径删除再创建后block id修改
 -rw-r--r--. 1 hdfs hadoop   2438266 1月  16 15:45 blk_1073988322
 -rw-r--r--. 1 hdfs hadoop     19059 1月  16 15:45 blk_1073988322_251229.meta
 ```
+2. fs
+```
+hadoop fs -count -q
+通过执行hadoop fs -count -q path 可以看到这个目录真正的空间使用情况
+QUOTA  REMAINING_QUOTA     SPACE_QUOTA  REMAINING_SPACE_QUOTA    DIR_COUNT  FILE_COUNT      CONTENT_SIZE FILE_NAME
+none             inf            none             inf            1            9        11145551071 /user/jack/s0/data
+```
+
+
 脆弱性测试
 
 ### hadoop各版本特性
