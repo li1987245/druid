@@ -193,6 +193,7 @@ sqlDF.show()
 ```
 - spark sql
 ```markdown
+spark-sql --driver-java-options "-Dlog4j.debug  -Dlog4j.configuration=file:///home/jinwei.li/spark/conf/log4j.properties" --conf spark.ui.enabled=false
 spark-sql --master yarn  --driver-cores 1 --hiveconf "spark.sql.warehouse.dir=hdfs://localhost:9000/user/hive/warehouse" 
 $SPARK_HOME/sbin/start-thriftserver.sh --master yarn    --driver-java-options "-Dspark.driver.port=4050" --hiveconf "hive.server2.thrift.port=10000"  --hiveconf "hive.metastore.warehouse.dir=hdfs://localhost:9000/user/hive/warehouse"
 $SPARK_HOME/bin/beeline --hiveconf hive.server2.thrift.port=10000 --hiveconf "hive.metastore.warehouse.dir=hdfs://localhost:9000/user/hive/warehouse"
@@ -334,6 +335,10 @@ Fair调度器采用了一套基于规则的系统来确定应用应该放到哪�
 <rule name="user" />
 </queuePlacementPolicy>
 ```
+-
+```java引用scala类提示，程序包com.br.rule.broadcast不存在
+mvn clean scala:compile compile package -pl field-monitor-common,field-monitor-rule-engine
+```
 
 
 - Performance Tuning
@@ -357,4 +362,30 @@ Timeout in seconds for the broadcast wait time in broadcast joins
 
 spark.sql.autoBroadcastJoinThreshold	10485760 (10 MB)	Configures the maximum size in bytes for a table that will be broadcast to all worker nodes when performing a join. By setting this value to -1 broadcasting can be disabled. Note that currently statistics are only supported for Hive Metastore tables where the command ANALYZE TABLE <tableName> COMPUTE STATISTICS noscan has been run.
 spark.sql.shuffle.partitions	200	Configures the number of partitions to use when shuffling data for joins or aggregations.
+```
+
+- spark on yarn 日志
+```
+yarn日志聚合
+1.yarn.log-aggregation-enable
+参数解释：是否启用日志聚集功能。
+默认值：false
+2.yarn.log-aggregation.retain-seconds
+参数解释：yarn在HDFS上聚集的日志最多保存多长时间。
+默认值：-1
+3.yarn.log-aggregation.retain-check-interval-seconds
+参数解释：多长时间检查一次日志，并将满足条件的删除，如果是0或者负数，则为上一个值的1/10。
+默认值：-1
+4.yarn.nodemanager.remote-app-log-dir
+参数解释：当应用程序运行结束后，日志被转移到的HDFS目录（启用日志聚集功能时有效）。
+默认值：/tmp/logs
+5.yarn.nodemanager.remote-app-log-dir-suffix
+后缀目录：logs
+6.yarn.nodemanager.log-aggregation.roll-monitoring-interval-seconds
+每隔一段时间进行日志的聚合，当前配置为：3600。如果配置为-1，则会等待任务执行完还会聚合
+
+设置日志保留时间（log4j设置滚动，yarn根据文件修改时间和当前时间对比来判断是否删除日志）
+spark.executor.logs.rolling.strategy time
+spark.executor.logs.rolling.maxRetainedFiles 72
+spark.executor.logs.rolling.time.interval {various settings}
 ```
