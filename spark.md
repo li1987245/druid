@@ -59,6 +59,12 @@ cp spark-<version>-yarn-shuffle.jar to all NodeManagers
 Increase NodeManager's heap size by setting YARN_HEAPSIZE (1000 by default) in etc/hadoop/yarn-env.sh to avoid garbage collection issues during shuffle.
 Restart all NodeManagers in your cluster.
 3.configuration:http://spark.apache.org/docs/latest/configuration.html#dynamic-allocation
+vim  $SPARK_HOME/conf/spark-defaults.conf
+spark.dynamicAllocation.minExecutors 1 #最小Executor数
+spark.dynamicAllocation.maxExecutors 100 #最大Executor数
+spark.dynamicAllocation.enabled true
+spark.shuffle.service.enabled true
+spark-sql  --master yarn-client --conf spark.shuffle.service.enabled=true --conf spark.dynamicAllocation.enabled=true -e ""
 ```
 - spark on hive
 1. vim $SPARK_HOME/conf/hive-site.xml
