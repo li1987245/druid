@@ -1167,6 +1167,16 @@ yarn  application -status applicationID
 yarn  application -movetoqueue applicationID -queue other
 yarn rmadmin -refreshQueues
 yarn rmadmin -refreshUserToGroupsMappings
+
+#yarn查看应用占用资源
+http://resourcemanager/ws/v1/cluster/apps/$applicationId
+http://resourcemanager/ws/v1/cluster/apps?state=RUNNING
+http://m20p14.100credit.cn/ws/v1/cluster/apps/application_1527672963024_1403039
+http://m20p14.100credit.cn/ws/v1/cluster/apps?state=RUNNING
+#查看应用运行节点
+yarn application -list -appStates RUNNING
+yarn applicationattempt -list application_1527672963024_1403050
+yarn container -list appattempt_1527672963024_1403050_000001
 ```
 
 
@@ -1180,4 +1190,22 @@ In general you run fsck command to get more information about the file. You can 
 hdfs debug recoverLease -path <path-of-the-file> -retries <retry times>
 
 This command will ask the NameNode to try to recover the lease for the file, and based on the NameNode log you may track to detailed DataNodes to understand the states of the replicas. The command may successfully close the file if there are still healthy replicas. Otherwise we can get more internal details about the file/block state.
+```
+2. oom
+```
+Yarn 和 Mapreduce 参数配置：
+yarn.nodemanager.resource.memory-mb = containers * RAM-per-container
+yarn.scheduler.minimum-allocation-mb  = RAM-per-container
+yarn.scheduler.maximum-allocation-mb  = containers * RAM-per-container
+mapreduce.map.memory.mb          = RAM-per-container
+mapreduce.reduce.memory.mb      = 2 * RAM-per-container
+mapreduce.map.java.opts          = 0.8 * RAM-per-container
+mapreduce.reduce.java.opts          = 0.8 * 2 * RAM-per-container
+yarn.nodemanager.resource.memory-mb = 22 * 3630 MB
+yarn.scheduler.minimum-allocation-mb     = 3630 MB
+yarn.scheduler.maximum-allocation-mb    = 22 * 3630 MB
+mapreduce.map.memory.mb             = 3630 MB
+mapreduce.reduce.memory.mb         = 22 * 3630 MB
+mapreduce.map.java.opts             = 0.8 * 3630 MB
+mapreduce.reduce.java.opts             = 0.8 * 2 * 3630 MB
 ```

@@ -190,7 +190,7 @@ offset 存储问题：
 
 High Level Consumer API，offset 存储在 Zookeeper
 Simple Consumer API， offset 完全由 consumer 自处理
-Kafka 0.8.2+ 开始，offset 管理策略有改进：
+Kafka 0.8.2+ 开始，offset 管理策略有改进,kafka0.10：
 
 http://www.confluent.io/blog/whats-coming-in-apache-kafka-0-8-2/
 Consumer 处理能力感知

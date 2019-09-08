@@ -59,4 +59,15 @@ public class Test {
 ```
 mybatis结果映射 BeanWrapper.instantiatePropertyValue->DefaultResultSetHandler.applyAutomaticMappings->BaseTypeHandler.getResult->具体的TypeHandler.getResult
 ```
+- java cp
+```
 java -cp loan-monitor-api.jar:libs/*.jar com.br.loan.strategy.api.MonitorApiApplication
+```
+- 加载的类所在包路径
+```
+System.out.println(类名.class.getProtectionDomain().getCodeSource().getLocation());
+```
+- java 打印jvm参数
+```
+java -XX:+PrintFlagsFinal -version | grep ThreadStackSize
+```

@@ -267,6 +267,9 @@ CREATE TABLE date_dictionary (
 
 
 \d dim_company
+导出表结构：
+pg_dump -s --table=dws_clyq_product_d data_insight > dws_clyq_product_d.sql
+
 装载数据
 echo 'SELECT * FROM mid_api_xg_product_d' | mysql -N -h 192.168.21.96 -P 3306 -B -udumper -pdumper@31nhf data_insight | sed "s/'/\'/;s/\t/\",\"/g;s/^/\"/;s/$/\"/;s/\n//g" > /opt/greenplum/db-data/mid_api_xg_product_d.csv
 COPY dws_api_product_d FROM '/opt/gpdata/data/dws_api_product_d.csv' WITH csv DELIMITER ',' null '-';
@@ -356,7 +359,7 @@ SELECT rolname, rsqname, pid, granted,
  select datname from pg_database;
  SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';
   SELECT column_name FROM information_schema.columns WHERE table_name ='table_name';
-  pg_dump -s --table=table_name testdb > table_name.sql
+  pg_dump -s --table=table_name dbname > table_name.sql
 
 节点故障等历史信息
 select * from gp_configuration_history tt order by 1 desc ;
@@ -393,6 +396,9 @@ select datname,pg_size_pretty(pg_database_size(datname)) from pg_database;
 查看greemplum数据分布情况
 select gp_segment_id,count(*) from gp_test group by gp_segment_id order by 1;
 
+查看greenplum表数据文件路径
+select oid,datname,dattablespace from pg_database where datname='data_insight'; #数据库目录/opt/greenplum/data1/primary/gpseg0/base/${oid}
+select oid,relname,relfilenode,reltablespace from pg_class where relname='dws_clyq_product_d'; #表文件/opt/greenplum/data1/primary/gpseg0/base/${oid}/${relfilenode}
 查看greemplum数据表更新时间
 SELECT
     *

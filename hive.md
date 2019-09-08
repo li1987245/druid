@@ -289,6 +289,11 @@ ALTER TABLE table ADD IF NOT EXISTS PARTITION (dt='20130101') LOCATION '/user/ha
 
 ALTER TABLE table ADD PARTITION (dt='2008-08-08', country='us') location '/path/to/us/part080808' PARTITION (dt='2008-08-09', country='us') location '/path/to/us/part080809';  //一次添加多个分区
 
+msck repair table 表名 #检测如果HDFS目录下存在但表的metastore中不存在的partition元信息，更新到metastore中
+
+DESCRIBE FORMATTED test PARTITION (dt='20190805'); #显示分区详细信息
+show table extended like 'tbl_name' partition (dt='20131023');
+
 hive还可以在是建表的时候就指定外部表的数据源路径，但这样的坏处是只能加载一个数据源了：
 CREATE EXTERNAL TABLE table4(id INT, name string)
 ROW FORMAT DELIMITED
@@ -345,6 +350,18 @@ SET hive.exec.max.dynamic.partitions=1000;
 INSERT overwrite TABLE t_lxw1234_partitioned PARTITION (month,day)
 SELECT url,substr(day,1,7) AS month,day
 FROM t_lxw1234;
+
+(4) sqoop 压缩使用：
+sqoop import --connect jdbc:mysql://host:3306/db_host?tinyInt1isBit=false \
+--username rule_service --password 'Rule_servicE.2015-09-22' \
+--query 'select userId,api_code,report_json from xx where createDate>="2019-08-03 00:00:00" and createDate<="2019-08-03 59:59:59" and $CONDITIONS limit 200' \
+-m 1 \
+--split-by id \
+--delete-target-dir \
+--target-dir /user/jie.li/test4 \
+--fields-terminated-by "\001" \
+--compress \
+--compression-codec org.apache.hadoop.io.compress.BZip2Codec 或者 org.apache.hadoop.io.compress.SnappyCodec 或者 com.hadoop.compression.lzo.LzopCodec
 ````
 5. 查询
 ````
@@ -366,6 +383,19 @@ set hive.resultset.use.unique.column.names=false; //设置显示列名 不显示
 count(*)    所有值不全为NULL时，加1操作
 count(1)    不管有没有值，只要有这条记录，值就加1
 count(col)  col列里面的值为null，值不会加1，这个列里面的值不为NULL，才加1
+
+lateral view 侧视图，列转行
+select a.request_json,b.* from
+(select * from image4_request_ter_api where datestr='20190901' and swift_number='4000134_20190831235959_9296' limit 1) a
+lateral view json_tuple(a.request_json, 'jsonMeal', 'name') b as f1, f2 ;
+
+
+select get_json_object(concat('{',sale_info_1,'}'),'$.source') as source,
+     get_json_object(concat('{',sale_info_1,'}'),'$.monthSales') as monthSales,
+     get_json_object(concat('{',sale_info_1,'}'),'$.userCount') as monthSales,
+     get_json_object(concat('{',sale_info_1,'}'),'$.score') as monthSales
+  from explode_lateral_view 
+LATERAL VIEW explode(split(regexp_replace(regexp_replace(sale_info,'\\[\\{',''),'}]',''),'},\\{'))sale_info as sale_info_1;
 ````
 Hive 的语法结构总结
 ````
