@@ -17,3 +17,8 @@ mysql> show status like '%open%';
 +--------------------------+----------+
 show open tables from DB;
 ```
+- load data infile
+```
+show variables like 'local_infile';
+set global local_infile = 'ON'; 或设置local-infle = 1
+```
