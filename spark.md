@@ -37,6 +37,35 @@ spark.yarn.jars=hdfs:///tmp/spark/lib_jars/*.jar
 spark.executor.memory=512m
 spark.serializer=org.apache.spark.serializer.KryoSerializer
 ```
+- Dynamic Resource Allocation
+```
+http://spark.apache.org/docs/latest/job-scheduling.html#dynamic-resource-allocation
+1. application set spark.dynamicAllocation.enabled to true.
+2.application set spark.shuffle.service.enabled to true
+vim yarn-site.xml
+<property>
+<name>yarn.nodemanager.aux-services</name>
+<value>mapreduce_shuffle,spark_shuffle</value>
+</property>
+property>
+<name>yarn.nodemanager.aux-services.spark_shuffle.class</name>
+<value>org.apache.spark.network.yarn.YarnShuffleService</value>
+</property>
+<property>
+<name>spark.shuffle.service.port</name>
+<value>7337</value>
+</property>
+cp spark-<version>-yarn-shuffle.jar to all NodeManagers
+Increase NodeManager's heap size by setting YARN_HEAPSIZE (1000 by default) in etc/hadoop/yarn-env.sh to avoid garbage collection issues during shuffle.
+Restart all NodeManagers in your cluster.
+3.configuration:http://spark.apache.org/docs/latest/configuration.html#dynamic-allocation
+vim  $SPARK_HOME/conf/spark-defaults.conf
+spark.dynamicAllocation.minExecutors 1 #最小Executor数
+spark.dynamicAllocation.maxExecutors 100 #最大Executor数
+spark.dynamicAllocation.enabled true
+spark.shuffle.service.enabled true
+spark-sql  --master yarn-client --conf spark.shuffle.service.enabled=true --conf spark.dynamicAllocation.enabled=true -e ""
+```
 - spark on hive
 1. vim $SPARK_HOME/conf/hive-site.xml
 ```

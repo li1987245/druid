@@ -5,3 +5,8 @@ cd /usr/hdp/current/zookeeper-client/bin/
 ls /hiveserver2
 quit
 ```
+- 查看日志
+```
+java -classpath .:/home/hadoop/application/zookeeper/lib/slf4j-api-1.6.1.jar:/home/hadoop/application/zookeeper/zookeeper-3.4.6.jar \
+org.apache.zookeeper.server.LogFormatter /home/hadoop/platform/zookeeper/log/version-2/log.2f00000001
+```

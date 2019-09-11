@@ -1,3 +1,36 @@
+#### python 基础
+- Anaconda
+1.安装
+https://www.continuum.io/downloads
+下载安装完成后，配置环境变量：
+ANACONDA_HOME=
+PATH=$ANACONDA_HOME:$ANACONDA_HOME/Scripts:$ANACONDA_HOME/Library/bin
+QT_QPA_PLATFORM_PLUGIN_PATH=$ANACONDA_HOME/pkgs/qt-5.9.7-vc14h73c81de_0/Library/plugins
+2.pycharm设置
+file->setting->project interpreter->add local
+设置路径为$ANACONDA_HOME/python.exe
+3.基本使用
+切换版本：canda python=3.6
+安装python包：
+conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
+conda config --set show_channel_urls yes
+conda create -n tensorflow python=3.5
+activate tensorflow
+pip install --ignore-installed --upgradehttps://storage.googleapis.com/tensorflow/windows/cpu/tensorflow-0.12.0-cp35-cp35m-win_amd64.whl
+- jupyter
+1. 安装
+```
+pip install --upgrade pip -i http://pypi.douban.com/simple --trusted-host pypi.douban.com
+python3 -m pip install jupyter
+```
+2. 启动
+jupyter notebook
+3. 安装扩展
+```
+pip install jupyter_contrib_nbextensions
+```
+
+
 ### 数据处理
 1. 数据类型
 ```markdown
@@ -41,4 +74,14 @@
   ```markdown
   基于概率模型:高斯混合模型（GMM，Gaussian Mixture Models）。基于神经网络模型的方法:SOM（Self Organized Maps）
   ```
-  
+
+
+#### FAQ
+1. pip is configured with locations that require TLS/SSL, however the ssl module in Python is not available.
+Can't connect to HTTPS URL because the SSL module is not available
+```
+yum install gcc libffi-devel zlib* openssl-devel
+windows:下载安装oepnssl
+https://slproweb.com/products/Win32OpenSSL.html
+https://blog.csdn.net/ouening/article/details/89182078
+```
