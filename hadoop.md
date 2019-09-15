@@ -1209,3 +1209,9 @@ mapreduce.reduce.memory.mb         = 22 * 3630 MB
 mapreduce.map.java.opts             = 0.8 * 3630 MB
 mapreduce.reduce.java.opts             = 0.8 * 2 * 3630 MB
 ```
+3. User [dr.who] is not authorized to view the logs
+```
+added in Ambari > HDFS > Configurations >Advanced core-site > Add Property
+hadoop.http.staticuser.user=yarn
+hadoop.security.authorization=false
+```
