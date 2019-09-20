@@ -530,3 +530,30 @@ Text val = new Text();
 reader.get(_key, val);
 return val.toString();
 ```
+- 调优参数
+```
+减少map数：
+set mapred.max.split.size=256000000;  #每个Map最大输入大小
+set mapred.min.split.size.per.node=100000000; #一个节点上split的至少的大小
+set mapred.min.split.size.per.rack=100000000; #一个交换机下split的至少的大小
+set hive.input.format=org.apache.Hadoop.hive.ql.io.CombineHiveInputFormat;  #执行Map前进行小文件合并
+增加map数方法：
+1、可以合理调整以下参数可以达到增加map数目的：
+set mapred.max.split.size=100000000;
+set mapred.min.split.size.per.node=100000000;
+set mapred.min.split.size.per.rack=100000000;
+set hive.input.format=org.apache.hadoop.hive.ql.io.CombineHiveInputFormat;
+2、重建目标表将物理分区切分成多份，如下：
+create table emp002 as select * from emp distribute by rand(10); # 也可以通过distribute by rand防止数据倾斜
+调整reduce数
+1.设置参数：
+set hive.exec.reducers.bytes.per.reducer=1000000000；
+set hive.exec.reducers.max=999；
+2.调整参数：
+set mapred.reduce.tasks=10；
+合并输出文件
+set hive.merge.mapfiles = true #在Map-only的任务结束时合并小文件
+set hive.merge.mapredfiles = true #在Map-Reduce的任务结束时合并小文件
+set hive.merge.size.per.task = 256*1000*1000 #合并文件的大小
+set hive.merge.smallfiles.avgsize=16000000 #当输出文件的平均大小小于该值时，启动一个独立的map-reduce任务进行文件merge。
+```

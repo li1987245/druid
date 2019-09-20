@@ -30,6 +30,11 @@ jupyter notebook
 pip install jupyter_contrib_nbextensions
 ```
 
+### numpy
+
+
+### pandas
+
 
 ### 数据处理
 1. 数据类型

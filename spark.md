@@ -62,8 +62,12 @@ Restart all NodeManagers in your cluster.
 vim  $SPARK_HOME/conf/spark-defaults.conf
 spark.dynamicAllocation.minExecutors 1 #最小Executor数
 spark.dynamicAllocation.maxExecutors 100 #最大Executor数
-spark.dynamicAllocation.enabled true
-spark.shuffle.service.enabled true
+spark.dynamicAllocation.schedulerBacklogTimeout 1s # 任务待时间（超时便申请新资源)默认60秒
+spark.dynamicAllocation.sustainedSchedulerBacklogTimeout 5s #  再次请求等待时间，默认60秒
+spark.dynamicAllocation.executorIdleTimeout # executor闲置时间（超过释放资源）默认600秒
+spark.dynamicAllocation.enabled true  # 开启动态资源分配
+spark.shuffle.service.enabled true   # 开启外部shuffle服务，开启这个服务可以保护executor的shuffle文件
+spark.shuffle.service.port 7337 # Shuffle Service服务端口，必须和yarn-site中的一致
 spark-sql  --master yarn-client --conf spark.shuffle.service.enabled=true --conf spark.dynamicAllocation.enabled=true -e ""
 ```
 - spark on hive
@@ -122,6 +126,8 @@ spark-submit --class org.apache.spark.examples.SparkPi \
     examples/jars/spark-examples*.jar \
     10
 spark-shell --master yarn  --driver-memory 512m --executor-memory 512m
+
+-num-executors 100 --executor-cores 4 --driver-memory 6g --executor-memory 6g
 ```
 
 hive with spark
@@ -366,7 +372,7 @@ Fair调度器采用了一套基于规则的系统来确定应用应该放到哪�
 ```
 -
 ```java引用scala类提示，程序包com.br.rule.broadcast不存在
-mvn clean scala:compile compile package -pl field-monitor-common,field-monitor-rule-engine
+mvn clean scala:compile compile package -P dev -pl field-monitor-common,field-monitor-rule-engine,field-monitor-realTime
 ```
 
 
@@ -427,6 +433,9 @@ yarn-cluster模式，默认读取的是spark-default.conf文件中的spark.drive
 2. Executor的JVM参数
 yarn-client模式，-Xmx，-Xms默认读取spark-env文件中的SPARK_EXECUTOR_MEMORY值，其他参数读取的是spark-default.conf文件中的spark.executor.extraJavaOptions对应的JVM参数值
 yarn-cluster模式，默认读取spark-default.conf文件中的spark.executor.extraJavaOptions对应的JVM参数值。
+
+--conf "spark.driver.extraJavaOptions=-XX:PermSize=512m -XX:MaxPermSize=512m  -XX:+CMSClassUnloadingEnabled -XX:MaxTenuringThreshold=31 -XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled -XX:+UseCMSCompactAtFullCollection -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=10 -XX:+UseCompressedOops -XX:+PrintGC -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -XX:+PrintGCApplicationStoppedTime -XX:+PrintHeapAtGC -XX:+PrintGCApplicationConcurrentTime -verbose:gc -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/logs/ -Xloggc:/tmp/logs/gc1.log" \
+--conf "spark.executor.extraJavaOptions=-XX:NewSize=512m -XX:MaxNewSize=512m -XX:PermSize=512m -XX:MaxPermSize=512m  -XX:+CMSClassUnloadingEnabled -XX:MaxTenuringThreshold=31 -XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled -XX:+UseCMSCompactAtFullCollection -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=10 -XX:+UseCompressedOops -XX:+PrintGC -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -XX:+PrintGCApplicationStoppedTime -XX:+PrintHeapAtGC -XX:+PrintGCApplicationConcurrentTime -verbose:gc -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/logs/ -Xloggc:/tmp/logs/gc.log" \
 ```
 
 - OOM分析

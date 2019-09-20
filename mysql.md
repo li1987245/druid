@@ -22,3 +22,7 @@ show open tables from DB;
 show variables like 'local_infile';
 set global local_infile = 'ON'; 或设置local-infle = 1
 ```
+- show processlist
+```
+select * from information_schema.processlist
+```
