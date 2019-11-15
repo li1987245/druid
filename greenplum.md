@@ -441,6 +441,9 @@ where
        AND pg_class.relname= 'base_common'
 --     and pg_class.relname ~~* any(array['%some%', '%someelse']));
 order by  pg_attribute.attnum
+
+测试性能
+select function from generate_series(1,100000,1) g;
 ```
 
 

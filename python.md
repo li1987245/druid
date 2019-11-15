@@ -90,3 +90,12 @@ windows:下载安装oepnssl
 https://slproweb.com/products/Win32OpenSSL.html
 https://blog.csdn.net/ouening/article/details/89182078
 ```
+2. conda 提示要安装的包不存在
+```
+1.
+pip install -r requirements.txt
+2.
+anaconda search -t conda celery
+anaconda show Winand/celery
+conda install --channel https://conda.anaconda.org/Winand celery
+```

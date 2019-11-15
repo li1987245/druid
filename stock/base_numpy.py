@@ -8,20 +8,26 @@ import matplotlib as mpl
 """
 https://blog.csdn.net/baidu_41560343/article/details/100023025
 """
+from sympy import *
+
+x = symbols('x')
+result = solve('x**2 - 2**x + 1',x)
+print(result)
+
 """
 1.求出n,t
 """
-from scipy.optimize import root,fsolve
-
-def f(x):
-    return np.array([0.02*x[0]*(2**x[1]-1),
-                     10*(1-x[0]/10)**x[1]])
-
-result_root = root(f,[50,1])
-result_fsolve = fsolve(f,[50,1])
-print(result_root)
-print("---------------------------")
-print(result_fsolve)
+# from scipy.optimize import root,fsolve
+#
+# def f(x):
+#     return np.array([0.02*x[0]*(2**x[1]-1),
+#                      10*(1-x[0]/10)**x[1]])
+#
+# result_root = root(f,[50,1])
+# result_fsolve = fsolve(f,[50,1])
+# print(result_root)
+# print("---------------------------")
+# print(result_fsolve)
 
 
 # from scipy.optimize import minimize

@@ -292,7 +292,8 @@ ALTER TABLE table ADD PARTITION (dt='2008-08-08', country='us') location '/path/
 msck repair table 表名 #检测如果HDFS目录下存在但表的metastore中不存在的partition元信息，更新到metastore中
 
 DESCRIBE FORMATTED test PARTITION (dt='20190805'); #显示分区详细信息
-show table extended like 'tbl_name' partition (dt='20131023');
+show partitions tbl_name;
+show table extended like 'tbl_name' partition (datestr='20191107');
 
 hive还可以在是建表的时候就指定外部表的数据源路径，但这样的坏处是只能加载一个数据源了：
 CREATE EXTERNAL TABLE table4(id INT, name string)
@@ -417,6 +418,7 @@ hive> insert overwrite local directory '/home/hadoop／ywendeng/test' select * f
 
 cluster by 除了具有 distribute by 的功能外还兼具 sort by 的功能。
 ````
+
 6. [join](http://shiyanjun.cn/archives/588.html)
 ````
 # JOIN
@@ -455,7 +457,9 @@ STORED AS SEQUENCEFILE;
 现在要基于a.key和b.key进行JOIN操作，此时JOIN列同时也是BUCKET列，JOIN语句如下：
 SELECT /*+ MAPJOIN(b) */ a.key, a.value FROM a JOIN b ON a.key = b.key
 ````
-- 常用函数
+
+
+8. 常用函数
 ````
 # get_json_object
 select get_json_object('${hivevar:msg}','$.server') from test;
@@ -478,7 +482,23 @@ parse_url(‘http://facebook.com/path/p1.php?query=1‘, ‘QUERY’)返回’qu
 # substr
 ````
 -
+9. 配置
+```
+参考 org.apache.hadoop.hive.conf.HiveConf
+hive.exec.orc.split.strategy 参数控制在读取ORC表时生成split的策略。BI策略以文件为粒度进行split划分；ETL策略会将文件进行切分，多个stripe组成一个split；HYBRID策略为：当文件的平均大小大于hadoop最大split值（默认256 * 1024 * 1024）时使用ETL策略，否则使用BI策略。
+对于一些较大的ORC表，可能其footer较大，ETL策略可能会导致其从hdfs拉取大量的数据来切分split，甚至会导致driver端OOM，因此这类表的读取建议使用BI策略。
+对于一些较小的尤其有数据倾斜的表（这里的数据倾斜指大量stripe存储于少数文件中），建议使用ETL策略
+```
 
+10. 查看orc文件
+```
+hive --orcfiledump hdfs路径
+```
+
+11. hadoop监控界面查看hive语句
+```
+通过application的AM的job界面左侧的configuration，搜索hive.query.string查询
+```
 
 ### 面试题
 - mapreduce编程模型
@@ -533,13 +553,14 @@ return val.toString();
 - 调优参数
 ```
 减少map数：
-set mapred.max.split.size=256000000;  #每个Map最大输入大小
+set mapreduce.input.fileinputformat.split.minsize=256000000; #每个map最小的输入大小，用于合并小文件
+set mapreduce.input.fileinputformat.split.maxsize=256000000;  #每个Map最大输入大小，用于增加map数提高并发，防止Combine后变成一个map（旧版本：mapred.max.split.size）
 set mapred.min.split.size.per.node=100000000; #一个节点上split的至少的大小
 set mapred.min.split.size.per.rack=100000000; #一个交换机下split的至少的大小
 set hive.input.format=org.apache.Hadoop.hive.ql.io.CombineHiveInputFormat;  #执行Map前进行小文件合并
 增加map数方法：
 1、可以合理调整以下参数可以达到增加map数目的：
-set mapred.max.split.size=100000000;
+set mapreduce.input.fileinputformat.split.minsize=100000000;
 set mapred.min.split.size.per.node=100000000;
 set mapred.min.split.size.per.rack=100000000;
 set hive.input.format=org.apache.hadoop.hive.ql.io.CombineHiveInputFormat;

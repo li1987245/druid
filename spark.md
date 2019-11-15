@@ -373,6 +373,18 @@ Fair调度器采用了一套基于规则的系统来确定应用应该放到哪�
 -
 ```java引用scala类提示，程序包com.br.rule.broadcast不存在
 mvn clean scala:compile compile package -P dev -pl field-monitor-common,field-monitor-rule-engine,field-monitor-realTime
+mvn clean package -pl data-insight-analysis -am -Dmaven.test.skip=true -e -U
+参数	全称	释义	说明
+-pl	--projects	Build specified reactor projects instead of all projects
+选项后可跟随{groupId}:{artifactId}或者所选模块的相对路径(多个模块以逗号分隔)
+-am	--also-make	If project list is specified, also build projects required by the list
+表示同时处理选定模块所依赖的模块
+-amd	--also-make-dependents	If project list is specified, also build projects that depend on projects on the list
+表示同时处理依赖选定模块的模块
+-N	--Non-recursive	Build projects without recursive
+表示不递归子模块
+-rf	--resume-from	Resume reactor from specified project
+表示从指定模块开始继续处理
 ```
 
 
@@ -397,8 +409,146 @@ Timeout in seconds for the broadcast wait time in broadcast joins
 
 spark.sql.autoBroadcastJoinThreshold	10485760 (10 MB)	Configures the maximum size in bytes for a table that will be broadcast to all worker nodes when performing a join. By setting this value to -1 broadcasting can be disabled. Note that currently statistics are only supported for Hive Metastore tables where the command ANALYZE TABLE <tableName> COMPUTE STATISTICS noscan has been run.
 spark.sql.shuffle.partitions	200	Configures the number of partitions to use when shuffling data for joins or aggregations.
-```
+spark.hadoopRDD.ignoreEmptySplits
+默认是false，如果是true，则会忽略那些空的splits，减小task的数量。
+spark.hadoop.mapreduce.input.fileinputformat.split.minsize
+是用于聚合input的小文件，用于控制每个mapTask的输入文件，防止小文件过多时候，产生太多的task.
+spark.sql.autoBroadcastJoinThreshold && spark.sql.broadcastTimeout
+用于控制在spark sql中使用BroadcastJoin时候表的大小阈值，适当增大可以让一些表走BroadcastJoin，提升性能，但是如果设置太大又会造成driver内存压力，而broadcastTimeout是用于控制Broadcast的Future的超时时间，默认是300s，可根据需求进行调整。
+spark.sql.adaptive.enabled && spark.sql.adaptive.shuffle.targetPostShuffleInputSize
+该参数是用于开启spark的自适应执行，这是spark比较老版本的自适应执行，后面的targetPostShuffleInputSize是用于控制之后的shuffle 阶段的平均输入数据大小，防止产生过多的task。
+intel大数据团队开发的adaptive-execution相较于目前spark的ae更加实用，该特性也已经加入到社区3.0之后的roadMap中，令人期待。
+spark.sql.parquet.mergeSchema
+默认false。当设为true，parquet会聚合所有parquet文件的schema，否则是直接读取parquet summary文件，或者在没有parquet summary文件时候随机选择一个文件的schema作为最终的schema。
+spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version
+1或者2，默认是1. MapReduce-4815 详细介绍了 fileoutputcommitter 的原理，实践中设置了 version=2 的比默认 version=1 的减少了70%以上的 commit 时间，但是1更健壮，能处理一些情况下的异常。
 
+spark-sql参数：
+set hive.exec.dynamic.partition=true; ##--动态分区
+set hive.exec.dynamic.partition.mode=nonstrict; ##--动态分区
+set hive.auto.convert.join=true; ##-- 自动判断大表和小表
+
+##-- hive并行
+set hive.exec.parallel=true;
+set hive.merge.mapredfiles=true;
+
+##-- 内存能力
+set spark.driver.memory=8G;
+set spark.executor.memory=2G;
+
+##-- 并发度
+set spark.dynamicAllocation.enabled=true;
+set spark.dynamicAllocation.maxExecutors=50;
+set spark.executor.cores=2;
+
+##-- shuffle
+set spark.sql.shuffle.partitions=100; -- 默认的partition数，及shuffle的reader数
+set spark.sql.adaptive.enabled=true; -- 启用自动设置 Shuffle Reducer 的特性，动态设置Shuffle Reducer个数（Adaptive Execution 的自动设置 Reducer 是由 ExchangeCoordinator 根据 Shuffle Write 统计信息决定）
+set spark.sql.adaptive.join.enabled=true; -- 开启 Adaptive Execution 的动态调整 Join 功能 (根据前面stage的shuffle write信息操作来动态调整是使用sortMergeJoin还是broadcastJoin)
+set spark.sql.adaptiveBroadcastJoinThreshold=268435456; -- 64M ,设置 SortMergeJoin 转 BroadcastJoin 的阈值，默认与spark.sql.autoBroadcastJoinThreshold相同
+set spark.sql.adaptive.shuffle.targetPostShuffleInputSize=134217728; -- shuffle时每个reducer读取的数据量大小，Adaptive Execution就是根据这个值动态设置Shuffle reader的数量
+set spark.sql.adaptive.allowAdditionalShuffle=true; -- 是否允许为了优化 Join 而增加 Shuffle,默认为false
+set spark.shuffle.service.enabled=true;
+
+
+##-- orc
+set spark.sql.orc.filterPushdown=true;
+set spark.sql.orc.splits.include.file.footer=true;
+set spark.sql.orc.cache.stripe.details.size=10000;
+set hive.exec.orc.split.strategy=ETL -- ETL：会切分文件,多个stripe组成一个split，BI：按文件进行切分，HYBRID：平均文件大小大于hadoop最大split值使用ETL,否则BI
+set spark.hadoop.mapreduce.input.fileinputformat.split.maxsize=134217728; -- 128M 读ORC时，设置一个split的最大值，超出后会进行文件切分
+set spark.hadoop.mapreduce.input.fileinputformat.split.minsize=67108864; -- 64M 读ORC时，设置小文件合并的阈值
+
+##-- 其他
+set spark.sql.hive.metastorePartitionPruning=true;
+
+##-- 广播表
+set spark.sql.autoBroadcastJoinThreshold=268435456; -- 256M
+```
+- 小文件处理
+```
+spark-core:
+import org.apache.hadoop.io.{LongWritable, Text}
+import org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat
+val sparkConf = new SparkConf()
+// 设置序列化器为KryoSerializer。
+sparkConf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+sparkConf.set("mapreduce.input.fileinputformat.split.maxsize", "67108864")
+val sc = new SparkContext(sparkConf)
+//sc.hadoopConfiguration.set("mapreduce.input.fileinputformat.split.maxsize","67108864")
+val lines = sc.newAPIHadoopFile("/user/jinwei.li/test1/dt=20190805",classOf[CombineTextInputFormat],classOf[LongWritable],classOf[Text])
+
+spark-sql:
+
+spark sql读取hive：
+1.org.apache.spark.sql.hive.client.HiveClientImpl$#toHiveTable 获取hive表信息，并根据元数据设置inputFormat
+2.org.apache.spark.sql.hive.execution.HiveTableScanExec#hiveQlTable hive表对象
+3.org.apache.spark.sql.hive.execution.HiveTableScanExec#hadoopConf hdfs配置信息(lazy)，对应spark.sparkContext.hadoopConfiguration
+4.org.apache.spark.sql.hive.HadoopTableReader#makeRDDForTable(hive无分区)/org.apache.spark.sql.hive.HadoopTableReader#makeRDDForPartitionedTable（hive表有分区），rdd最小分区计算公式：math.max(hadoopConf.getInt("mapreduce.job.maps", 1),
+      sparkSession.sparkContext.defaultMinPartitions)，
+5.org.apache.spark.sql.hive.TableReader#createHadoopRdd 读取hdfs，2.4版本inputFormatClass使用的是hive表设置的inputFormatClass，无法修改
+val rdd = new HadoopRDD(
+      sparkSession.sparkContext,
+      _broadcastedHadoopConf.asInstanceOf[Broadcast[SerializableConfiguration]],
+      Some(initializeJobConfFunc),
+      inputFormatClass, # 默认为hive表存储格式
+      classOf[Writable],
+      classOf[Writable],
+      _minSplitsPerRDD)
+6.org.apache.spark.rdd.HadoopRDD#getPartitions # spark读取hdfs生成的partition数量计算
+hadoop2.6.5 textFileInputFormat(org.apache.hadoop.mapred.FileInputFormat,spark旧hadoop api使用)的split计算公式：
+long goalSize = totalSize / (long)(numSplits == 0 ? 1 : numSplits);
+long minSize = Math.max(job.getLong("mapreduce.input.fileinputformat.split.minsize", 1L), this.minSplitSize);
+long splitSize = Math.max(minSize, Math.min(goalSize, blockSize));
+其中spark的sc.textFile(inputPath, minPartitions)中的minPartitions，MR中的mapreduce.job.maps对应numSplits
+mapreduce.input.fileinputformat.split.minsize对应minSize
+dfs.block.size对应blockSize
+
+org.apache.spark.SparkContext#newAPIHadoopFile
+hadoop3.1 textFileInputFormat(org.apache.hadoop.mapreduce.lib.input.FileInputFormat,spark新hadoop api使用)的split计算公式：
+long minSize = Math.max(1L, job.getConfiguration().getLong("mapreduce.input.fileinputformat.split.minsize", 1L));
+long maxSize = context.getConfiguration().getLong("mapreduce.input.fileinputformat.split.maxsize",Long.MAX_VALUE);
+long splitSize = Math.max(minSize, Math.min(maxSize, blockSize));
+
+hive on spark 读取hdfs:
+org.apache.hadoop.hive.ql.exec.spark.SparkPlanGenerator#generateMapInput 读取hadoop时，
+通过org.apache.hadoop.hive.ql.exec.spark.SparkPlanGenerator#getInputFormat 可以指定hive.input.format
+
+hive on spark 调优参数：
+set hive.hadoop.supports.splittable.combineinputformat=true;
+set hive.input.format=org.apache.hadoop.hive.ql.io.CombineHiveInputFormat;
+set mapreduce.input.fileinputformat.split.maxsize=256000000;
+set mapreduce.input.fileinputformat.split.minsize=67108864; -- 64M 设置小文件合并的阈值，默认为空
+set mapreduce.input.fileinputformat.split.minsize.per.node=67108864; -- 64M 设置节点小文件合并的阈值
+set mapreduce.input.fileinputformat.split.minsize.per.rack=67108864; -- 64M 设置同一机架小文件合并的阈值
+set hive.merge.mapfiles = true;
+set hive.merge.mapredfiles = true;
+set hive.merge.size.per.task = 256000000;
+set hive.merge.smallfiles.avgsize=16000000;
+
+
+
+
+spark.sqlContext.setConf("hive.merge.mapfiles","true")
+spark.sqlContext.setConf("hive.input.format","org.apache.hadoop.hive.ql.io.CombineHiveInputFormat")
+spark.sqlContext.setConf("mapreduce.input.fileinputformat.split.maxsize","256000000")
+spark.sqlContext.setConf("mapreduce.input.fileinputformat.split.minsize","67108864")
+spark.sqlContext.setConf("mapreduce.input.fileinputformat.split.minsize.per.node","67108864")
+spark.sqlContext.setConf("mapreduce.input.fileinputformat.split.minsize.per.rack","256000000")
+
+spark.sparkContext.hadoopConfiguration
+
+spark on hive默认读取hive表inputformat，textinputformat无法对多个小文件做直接合并，可以通过coalesce合并
+，同时对hive分区，spark会使用unionrdd包装，对单个文件的分区控制，可以通过设置hive on spark相同的参数，hive.input.format不生效
+```
+- spark 设置hadoop参数
+```
+--conf "spark.hadoop.mapreduce.input.fileinputformat.split.minsize=107374182" --conf "spark.hadoop.mapreduce.input.fileinputformat.split.maxsize=107374182"
+spark.hadoop.hadoop参数
+详见：
+org.apache.spark.deploy.SparkHadoopUtil#newConfiguration
+org.apache.spark.deploy.SparkHadoopUtil#appendSparkHadoopConfigs
+```
 - spark on yarn 日志
 ```
 yarn日志聚合
@@ -478,7 +628,10 @@ reduce端聚合内存大小默认为executor memory * 0.2，可增大内存或�
 解决办法：
 1.增大Executor内存(即堆内内存) ，申请的堆外内存也会随之增加--executor-memory 5G
 2.增大堆外内存 --conf spark.yarn.executor.memoryoverhead 2048M  --conf spark.executor.memoryoverhead 2048M
-
+- Size exceeds Integer.MAX_VALUE
+```
+spark 读取文件大小有2G限制，因为spark存储数据用的bytebuffer，大小为Integer.MAX_VALUE
+```
 
 
 jmap -dump:format=b,file=文件名.hprof pid
@@ -534,6 +687,101 @@ spark.shuffle.consolidateFiles
 默认值：false
 参数说明：如果使用HashShuffleManager，该参数有效。如果设置为true，那么就会开启consolidate机制，会大幅度合并shuffle write的输出文件，对于shuffle read task数量特别多的情况下，这种方法可以极大地减少磁盘IO开销，提升性能。
 调优建议：如果的确不需要SortShuffleManager的排序机制，那么除了使用bypass机制，还可以尝试将spark.shffle.manager参数手动指定为hash，使用HashShuffleManager，同时开启consolidate机制。在实践中尝试过，发现其性能比开启了bypass机制的SortShuffleManager要高出10%~30%。
+
+spark sql配置（参考org.apache.spark.sql.internal.SQLConf）：
+spark.sql.adaptive.enabled	false	When true, enable adaptive query execution.如果开启，spark.sql.shuffle.partitions设置的partition可能会被合并到一个reducer里运行
+spark.sql.adaptive.shuffle.targetPostShuffleInputSize	67108864b	The target post-shuffle input size in bytes of a task.和spark.sql.adaptive.enabled配合使用，当开启调整partition功能后，当mapper端两个partition的数据合并后数据量小于targetPostShuffleInputSize时，Spark会将两个partition进行合并到一个reducer端进行处理
+spark.sql.adaptive.minNumPostShufflePartitions: 50 当spark.sql.adaptive.enabled参数开启后，有时会导致很多分区被合并，为了防止分区过少，可以设置spark.sql.adaptive.minNumPostShufflePartitions参数，防止分区过少而影响性能
+spark.sql.autoBroadcastJoinThreshold	10485760	Configures the maximum size in bytes for a table that will be broadcast to all worker nodes when performing a join.  By setting this value to -1 broadcasting can be disabled. Note that currently statistics are only supported for Hive Metastore tables where the command <code>ANALYZE TABLE &lt;tableName&gt; COMPUTE STATISTICS noscan</code> has been run, and file-based data source tables where the statistics are computed directly on the files of data.
+spark.sql.broadcastTimeout	300000ms	Timeout in seconds for the broadcast wait time in broadcast joins.
+spark.sql.cbo.enabled	false	Enables CBO for estimation of plan statistics when set true.
+spark.sql.cbo.joinReorder.dp.star.filter	false	Applies star-join filter heuristics to cost based join enumeration.
+spark.sql.cbo.joinReorder.dp.threshold	12	The maximum number of joined nodes allowed in the dynamic programming algorithm.
+spark.sql.cbo.joinReorder.enabled	false	Enables join reorder in CBO.
+spark.sql.cbo.starSchemaDetection	false	When true, it enables join reordering based on star schema detection.
+spark.sql.columnNameOfCorruptRecord	_corrupt_record	The name of internal column for storing raw/un-parsed JSON and CSV records that fail to parse.
+spark.sql.crossJoin.enabled	false	When false, we will throw an error if a query contains a cartesian product without explicit CROSS JOIN syntax.
+spark.sql.execution.arrow.enabled	false	When true, make use of Apache Arrow for columnar data transfers. Currently available for use with pyspark.sql.DataFrame.toPandas, and pyspark.sql.SparkSession.createDataFrame when its input is a Pandas DataFrame. The following data types are unsupported: BinaryType, MapType, ArrayType of TimestampType, and nested StructType.
+spark.sql.execution.arrow.maxRecordsPerBatch	10000	When using Apache Arrow, limit the maximum number of records that can be written to a single ArrowRecordBatch in memory. If set to zero or negative there is no limit.
+spark.sql.extensions	<undefined>	Name of the class used to configure Spark Session extensions. The class should implement Function1[SparkSessionExtension, Unit], and must have a no-args constructor.
+spark.sql.files.ignoreCorruptFiles	false	Whether to ignore corrupt files. If true, the Spark jobs will continue to run when encountering corrupted files and the contents that have been read will still be returned.
+spark.sql.files.ignoreMissingFiles	false	Whether to ignore missing files. If true, the Spark jobs will continue to run when encountering missing files and the contents that have been read will still be returned.
+spark.sql.files.maxPartitionBytes	134217728	The maximum number of bytes to pack into a single partition when reading files.
+spark.sql.files.maxRecordsPerFile	0	Maximum number of records to write out to a single file. If this value is zero or negative, there is no limit.
+spark.sql.function.concatBinaryAsString	false	When this option is set to false and all inputs are binary, `functions.concat` returns an output as binary. Otherwise, it returns as a string.
+spark.sql.function.eltOutputAsString	false	When this option is set to false and all inputs are binary, `elt` returns an output as binary. Otherwise, it returns as a string.
+spark.sql.groupByAliases	true	When true, aliases in a select list can be used in group by clauses. When false, an analysis exception is thrown in the case.
+spark.sql.groupByOrdinal	true	When true, the ordinal numbers in group by clauses are treated as the position in the select list. When false, the ordinal numbers are ignored.
+spark.sql.hive.caseSensitiveInferenceMode	INFER_AND_SAVE	Sets the action to take when a case-sensitive schema cannot be read from a Hive table's properties. Although Spark SQL itself is not case-sensitive, Hive compatible file formats such as Parquet are. Spark SQL must use a case-preserving schema when querying any table backed by files containing case-sensitive field names or queries may not return accurate results. Valid options include INFER_AND_SAVE (the default mode-- infer the case-sensitive schema from the underlying data files and write it back to the table properties), INFER_ONLY (infer the schema but don't attempt to write it to the table properties) and NEVER_INFER (fallback to using the case-insensitive metastore schema instead of inferring).
+spark.sql.hive.convertMetastoreParquet	true	When set to true, the built-in Parquet reader and writer are used to process parquet tables created by using the HiveQL syntax, instead of Hive serde.
+spark.sql.hive.convertMetastoreParquet.mergeSchema	false	When true, also tries to merge possibly different but compatible Parquet schemas in different Parquet data files. This configuration is only effective when "spark.sql.hive.convertMetastoreParquet" is true.
+spark.sql.hive.filesourcePartitionFileCacheSize	262144000	When nonzero, enable caching of partition file metadata in memory. All tables share a cache that can use up to specified num bytes for file metadata. This conf only has an effect when hive filesource partition management is enabled.
+spark.sql.hive.hiveserver2.jdbc.url		HiveServer2 JDBC URL.
+spark.sql.hive.hiveserver2.jdbc.url.principal		HiveServer2 JDBC Principal.
+spark.sql.hive.manageFilesourcePartitions	true	When true, enable metastore partition management for file source tables as well. This includes both datasource and converted Hive tables. When partition management is enabled, datasource tables store partition in the Hive metastore, and use the metastore to prune partitions during query planning.
+spark.sql.hive.metastore.barrierPrefixes		A comma separated list of class prefixes that should explicitly be reloaded for each version of Hive that Spark SQL is communicating with. For example, Hive UDFs that are declared in a prefix that typically would be shared (i.e. <code>org.apache.spark.*</code>).
+spark.sql.hive.metastore.jars	builtin
+ Location of the jars that should be used to instantiate the HiveMetastoreClient.
+ This property can be one of three options: "
+ 1. "builtin"
+   Use Hive 1.2.1, which is bundled with the Spark assembly when
+   <code>-Phive</code> is enabled. When this option is chosen,
+   <code>spark.sql.hive.metastore.version</code> must be either
+   <code>1.2.1</code> or not defined.
+ 2. "maven"
+   Use Hive jars of specified version downloaded from Maven repositories.
+ 3. A classpath in the standard format for both Hive and Hadoop.
+
+spark.sql.hive.metastore.sharedPrefixes	com.mysql.jdbc,org.postgresql,com.microsoft.sqlserver,oracle.jdbc	A comma separated list of class prefixes that should be loaded using the classloader that is shared between Spark SQL and a specific version of Hive. An example of classes that should be shared is JDBC drivers that are needed to talk to the metastore. Other classes that need to be shared are those that interact with classes that are already shared. For example, custom appenders that are used by log4j.
+spark.sql.hive.metastore.version	1.2.1	Version of the Hive metastore. Available options are <code>0.12.0</code> through <code>2.3.2</code>.
+spark.sql.hive.metastorePartitionPruning	true	When true, some predicates will be pushed down into the Hive metastore so that unmatching partitions can be eliminated earlier. This only affects Hive tables not converted to filesource relations (see HiveUtils.CONVERT_METASTORE_PARQUET and HiveUtils.CONVERT_METASTORE_ORC for more information).
+spark.sql.hive.thriftServer.async	true	When set to true, Hive Thrift server executes SQL queries in an asynchronous way.
+spark.sql.hive.thriftServer.singleSession	false	When set to true, Hive Thrift server is running in a single session mode. All the JDBC/ODBC connections share the temporary views, function registries, SQL configuration and the current database.
+spark.sql.hive.verifyPartitionPath	false	When true, check all the partition paths under the table's root directory when reading data stored in HDFS.
+spark.sql.hive.version	1.2.1	deprecated, please use spark.sql.hive.metastore.version to get the Hive version in Spark.
+spark.sql.inMemoryColumnarStorage.batchSize	10000	Controls the size of batches for columnar caching.  Larger batch sizes can improve memory utilization and compression, but risk OOMs when caching data.
+spark.sql.inMemoryColumnarStorage.compressed	true	When set to true Spark SQL will automatically select a compression codec for each column based on statistics of the data.
+spark.sql.inMemoryColumnarStorage.enableVectorizedReader	true	Enables vectorized reader for columnar caching.
+spark.sql.optimizer.metadataOnly	true	When true, enable the metadata-only query optimization that use the table's metadata to produce the partition columns instead of table scans. It applies when all the columns scanned are partition columns and the query has an aggregate operator that satisfies distinct semantics.
+spark.sql.orc.compression.codec	snappy	Sets the compression codec used when writing ORC files. If either `compression` or `orc.compress` is specified in the table-specific options/properties, the precedence would be `compression`, `orc.compress`, `spark.sql.orc.compression.codec`.Acceptable values include: none, uncompressed, snappy, zlib, lzo.
+spark.sql.orc.enableVectorizedReader	true	Enables vectorized orc decoding.
+spark.sql.orc.filterPushdown	true	When true, enable filter pushdown for ORC files.
+spark.sql.orderByOrdinal	true	When true, the ordinal numbers are treated as the position in the select list. When false, the ordinal numbers in order/sort by clause are ignored.
+spark.sql.parquet.binaryAsString	false	Some other Parquet-producing systems, in particular Impala and older versions of Spark SQL, do not differentiate between binary data and strings when writing out the Parquet schema. This flag tells Spark SQL to interpret binary data as a string to provide compatibility with these systems.
+spark.sql.parquet.compression.codec	snappy	Sets the compression codec used when writing Parquet files. If either `compression` or `parquet.compression` is specified in the table-specific options/properties, the precedence would be `compression`, `parquet.compression`, `spark.sql.parquet.compression.codec`. Acceptable values include: none, uncompressed, snappy, gzip, lzo.
+spark.sql.parquet.enableVectorizedReader	true	Enables vectorized parquet decoding.
+spark.sql.parquet.filterPushdown	true	Enables Parquet filter push-down optimization when set to true.
+spark.sql.parquet.int64AsTimestampMillis	false	(Deprecated since Spark 2.3, please set spark.sql.parquet.outputTimestampType.) When true, timestamp values will be stored as INT64 with TIMESTAMP_MILLIS as the extended type. In this mode, the microsecond portion of the timestamp value will betruncated.
+spark.sql.parquet.int96AsTimestamp	true	Some Parquet-producing systems, in particular Impala, store Timestamp into INT96. Spark would also store Timestamp as INT96 because we need to avoid precision lost of the nanoseconds field. This flag tells Spark SQL to interpret INT96 data as a timestamp to provide compatibility with these systems.
+spark.sql.parquet.int96TimestampConversion	false	This controls whether timestamp adjustments should be applied to INT96 data when converting to timestamps, for data written by Impala.  This is necessary because Impala stores INT96 data with a different timezone offset than Hive & Spark.
+spark.sql.parquet.mergeSchema	false	When true, the Parquet data source merges schemas collected from all data files, otherwise the schema is picked from the summary file or a random data file if no summary file is available.
+spark.sql.parquet.outputTimestampType	INT96	Sets which Parquet timestamp type to use when Spark writes data to Parquet files. INT96 is a non-standard but commonly used timestamp type in Parquet. TIMESTAMP_MICROS is a standard timestamp type in Parquet, which stores number of microseconds from the Unix epoch. TIMESTAMP_MILLIS is also standard, but with millisecond precision, which means Spark has to truncate the microsecond portion of its timestamp value.
+spark.sql.parquet.recordLevelFilter.enabled	false	If true, enables Parquet's native record-level filtering using the pushed down filters. This configuration only has an effect when 'spark.sql.parquet.filterPushdown' is enabled.
+spark.sql.parquet.respectSummaryFiles	false	When true, we make assumption that all part-files of Parquet are consistent with summary files and we will ignore them when merging schema. Otherwise, if this is false, which is the default, we will merge all part-files. This should be considered as expert-only option, and shouldn't be enabled before knowing what it means exactly.
+spark.sql.parquet.writeLegacyFormat	false	Whether to be compatible with the legacy Parquet format adopted by Spark 1.4 and prior versions, when converting Parquet schema to Spark SQL schema and vice versa.
+spark.sql.parser.quotedRegexColumnNames	false	When true, quoted Identifiers (using backticks) in SELECT statement are interpreted as regular expressions.
+spark.sql.pivotMaxValues	10000	When doing a pivot without specifying values for the pivot column this is the maximum number of (distinct) values that will be collected without error.
+spark.sql.queryExecutionListeners	<undefined>	List of class names implementing QueryExecutionListener that will be automatically added to newly created sessions. The classes should have either a no-arg constructor, or a constructor that expects a SparkConf argument.
+spark.sql.session.timeZone	Asia/Harbin	The ID of session local timezone, e.g. "GMT", "America/Los_Angeles", etc.
+spark.sql.shuffle.partitions	200	The default number of partitions to use when shuffling data for joins or aggregations.
+spark.sql.sources.bucketing.enabled	true	When false, we will treat bucketed table as normal table
+spark.sql.sources.default	parquet	The default data source to use in input/output.
+spark.sql.sources.parallelPartitionDiscovery.threshold	32	The maximum number of paths allowed for listing files at driver side. If the number of detected paths exceeds this value during partition discovery, it tries to list the files with another Spark distributed job. This applies to Parquet, ORC, CSV, JSON and LibSVM data sources.
+spark.sql.sources.partitionColumnTypeInference.enabled	true	When true, automatically infer the data types for partitioned columns.
+spark.sql.sources.partitionOverwriteMode	STATIC	When INSERT OVERWRITE a partitioned data source table, we currently support 2 modes: static and dynamic. In static mode, Spark deletes all the partitions that match the partition specification(e.g. PARTITION(a=1,b)) in the INSERT statement, before overwriting. In dynamic mode, Spark doesn't delete partitions ahead, and only overwrite those partitions that have data written into it at runtime. By default we use static mode to keep the same behavior of Spark prior to 2.3. Note that this config doesn't affect Hive serde tables, as they are always overwritten with dynamic mode.
+spark.sql.statistics.fallBackToHdfs	false	If the table statistics are not available from table metadata enable fall back to hdfs. This is useful in determining if a table is small enough to use auto broadcast joins.
+spark.sql.statistics.histogram.enabled	false	Generates histograms when computing column statistics if enabled. Histograms can provide better estimation accuracy. Currently, Spark only supports equi-height histogram. Note that collecting histograms takes extra cost. For example, collecting column statistics usually takes only one table scan, but generating equi-height histogram will cause an extra table scan.
+spark.sql.statistics.size.autoUpdate.enabled	false	Enables automatic update for table size once table's data is changed. Note that if the total number of files of the table is very large, this can be expensive and slow down data change commands.
+spark.sql.streaming.checkpointLocation	<undefined>	The default location for storing checkpoint data for streaming queries.
+spark.sql.streaming.metricsEnabled	false	Whether Dropwizard/Codahale metrics will be reported for active streaming queries.
+spark.sql.streaming.numRecentProgressUpdates	100	The number of progress updates to retain for a streaming query
+spark.sql.thriftserver.scheduler.pool	<undefined>	Set a Fair Scheduler pool for a JDBC client session.
+spark.sql.thriftserver.ui.retainedSessions	200	The number of SQL client sessions kept in the JDBC/ODBC web UI history.
+spark.sql.thriftserver.ui.retainedStatements	200	The number of SQL statements kept in the JDBC/ODBC web UI history.
+spark.sql.ui.retainedExecutions	1000	Number of executions to retain in the Spark UI.
+spark.sql.variable.substitute	true	This enables substitution using syntax like ${var} ${system:var} and ${env:var}.
+spark.sql.warehouse.dir	file:/home/spark/spark-warehouse	The default location for managed databases and tables.
+spark.yarn.security.credentials.hiveserver2.enabled	false	When true, HiveServer2 credential provider is enabled.
 ```
 
 - mat

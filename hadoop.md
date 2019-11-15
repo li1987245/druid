@@ -1215,3 +1215,27 @@ added in Ambari > HDFS > Configurations >Advanced core-site > Add Property
 hadoop.http.staticuser.user=yarn
 hadoop.security.authorization=false
 ```
+4. There appears to be a gap in the edit log.  We expected txid 350941, but got txid 350942.
+```
+在启动standy节点的namenode时，报错表示:该节点namenode元数据发生了损坏。需要恢复元数据以后，才能启动namenode
+1.设置NN到安全模式，防止元数据变化
+hdfs dfsadmin -safemode enter
+2. 修复
+hadoop namenode -recover
+3. 登录standby节点启动NN
+./hadoop-daemon.sh start namenode
+4.离开安全模式
+hdfs dfsadmin -safemode leave
+
+强制同步（如果修复无法正常恢复）
+sudo -u hdfs
+1. Put Active NN in safemode
+hdfs dfsadmin -safemode enter
+2. Do a savenamespace operation on Active NN
+hdfs dfsadmin -saveNamespace
+3. Leave Safemode
+hdfs dfsadmin -safemode leave
+4. Login to Standby NN
+5. Run below command on Standby namenode to get latest fsimage that we saved in above steps.
+hdfs namenode -bootstrapStandby -force
+```
