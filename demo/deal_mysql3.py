@@ -5,7 +5,6 @@
 # -*- coding: utf-8 -*-
 import MySQLdb as mdb
 
-
 # 连接数据库
 conn = mdb.connect('localhost', 'root', 'root')
 
@@ -56,24 +55,24 @@ try:
 
     # 查询数据条目
     count = cursor.execute('SELECT * FROM %s' %TABLE_NAME)
-    print 'total records: %d' %count
-    print 'total records:', cursor.rowcount
+    print('total records: %d' %count)
+    print('total records:', cursor.rowcount)
 
     # 获取表名信息
     desc = cursor.description
-    print "%s %3s" % (desc[0][0], desc[1][0])
+    print("%s %3s" % (desc[0][0], desc[1][0]))
 
     # 查询一条记录
-    print 'fetch one record:'
+    print('fetch one record:')
     result = cursor.fetchone()
-    print result
-    print 'id: %s,name: %s' %(result[0],result[1])
+    print(result)
+    print('id: %s,name: %s' %(result[0],result[1]))
 
     # 查询多条记录
-    print 'fetch five record:'
+    print('fetch five record:')
     results = cursor.fetchmany(5)
     for r in results:
-        print r
+        print(r)
 
     # 查询所有记录
     # 重置游标位置，偏移量:大于0向后移动;小于0向前移动，mode默认是relative
@@ -81,12 +80,12 @@ try:
     cursor.scroll(0,mode='absolute')
     results = cursor.fetchall()
     for r in results:
-        print r
+        print(r)
 
     cursor.scroll(-2)
     results = cursor.fetchall()
     for r in results:
-        print r
+        print(r)
 
     # 更新记录
     cursor.execute('UPDATE %s SET name = "%s" WHERE id = %s' %(TABLE_NAME,'Jack',1))

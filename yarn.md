@@ -52,3 +52,25 @@ hadoop-annotations中java.tools指定的是system scope，需要修改路径
 ```
 
 ```
+
+FAQ
+- hadoop部分节点负载高，而其他节点空闲
+```
+目前使用capacity调度器，当NM的心跳汇报到RM时，分配资源
+org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler#handle
+case NODE_UPDATE:
+{
+  NodeUpdateSchedulerEvent nodeUpdatedEvent = (NodeUpdateSchedulerEvent)event;
+  nodeUpdate(nodeUpdatedEvent.getRMNode());
+}
+hadoop 2.7
+容量调度在2.0版本无法配置每次心跳分配多少container，容量调度是根据NM节点的资源来计算本次可以分配多少container
+公平调度可以通过设置实现
+yarn.scheduler.fair.assignmultiple	Whether to allow multiple container assignments in one heartbeat. Defaults to false.
+yarn.scheduler.fair.max.assign	If assignmultiple is true, the maximum amount of containers that can be assigned in one heartbeat. Defaults to -1, which sets no limit.
+hadoop 3.1
+org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler#allocateContainersToNode中while循环调用
+org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler#canAllocateMore，判断是否可以分配container，
+可通过配置yarn.scheduler.capacity.per-node-heartbeat.maximum-container-assignments限制每次心跳可分配container数量
+（yarn.scheduler.capacity.per-node-heartbeat.multiple-assignments-enabled标识表示是否开启单次心跳多次分配）
+```

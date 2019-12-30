@@ -26,6 +26,104 @@ set global local_infile = 'ON'; 或设置local-infle = 1
 ```
 select * from information_schema.processlist
 ```
+2. 执行计划
+
+- explain
+```
+mysql> explain SELECT  NOW() as 'current_Time'
+    ->         ,'trinityforce_request_log_api' as api_type
+    ->         ,api_code
+    ->         ,response_code
+    ->         ,sum(code_cnt) as code_Total
+    ->         ,min(request_time) as first_time
+    -> from realtime_code_stats
+    -> where request_time>='2019-11-29 00:00:00'
+    ->       and request_time<'2019-11-29 23:59:59'
+    ->   and api_type = 'trinityforce_request_log_api'
+    ->       and api_code != ''
+    -> GROUP BY api_code,response_code
+    -> order by null;
++----+-------------+---------------------+------+---------------+------+---------+------+---------+------------------------------+
+| id | select_type | table               | type | possible_keys | key  | key_len | ref  | rows    | Extra                        |
++----+-------------+---------------------+------+---------------+------+---------+------+---------+------------------------------+
+|  1 | SIMPLE      | realtime_code_stats | ALL  | rt_res        | NULL | NULL    | NULL | 1137132 | Using where; Using temporary |
++----+-------------+---------------------+------+---------------+------+---------+------+---------+------------------------------+
+- 查看mysql配置
+```
+mysql> show variables like '%tmp%';
++-------------------+----------+
+| Variable_name     | Value    |
++-------------------+----------+
+| max_tmp_tables    | 32       |
+| slave_load_tmpdir | /tmp     |
+| tmp_table_size    | 67108864 |
+| tmpdir            | /tmp     |
++-------------------+----------+
+mysql> show variables like 'max_heap_table_size';
++---------------------+----------+
+| Variable_name       | Value    |
++---------------------+----------+
+| max_heap_table_size | 67108864 |
++---------------------+----------+
+mysql> show global status like 'qcache%';
++-------------------------+-----------+
+| Variable_name           | Value     |
++-------------------------+-----------+
+| Qcache_free_blocks      | 1572      |
+| Qcache_free_memory      | 86248136  |
+| Qcache_hits             | 55786425  |
+| Qcache_inserts          | 12308136  |
+| Qcache_lowmem_prunes    | 49042     |
+| Qcache_not_cached       | 258198419 |
+| Qcache_queries_in_cache | 25121     |
+| Qcache_total_blocks     | 52538     |
++-------------------------+-----------+
+Qcache_queries_in_cache  在缓存中已注册的查询数目
+Qcache_inserts  被加入到缓存中的查询数目
+Qcache_hits  缓存采样数数目
+Qcache_lowmem_prunes  因为缺少内存而被从缓存中删除的查询数目
+Qcache_not_cached  没有被缓存的查询数目 (不能被缓存的，或由于 QUERY_CACHE_TYPE)
+Qcache_free_memory  查询缓存的空闲内存总数,可以缓存一些常用的查询,如果是常用的sql会被装载到内存。那样会增加数据库访问速度
+Qcache_free_blocks  查询缓存中的空闲内存块的数目
+Qcache_total_blocks  查询缓存中的块的总数目
+mysql> SHOW TABLE STATUS like 'realtime_code_stats%';
++---------------------+--------+---------+------------+---------+----------------+-------------+-----------------+--------------+------------+----------------+---------------------+-------------+------------+-----------------+----------+----------------+---------+
+| Name                | Engine | Version | Row_format | Rows    | Avg_row_length | Data_length | Max_data_length | Index_length | Data_free  | Auto_increment | Create_time         | Update_time | Check_time | Collation       | Checksum | Create_options | Comment |
++---------------------+--------+---------+------------+---------+----------------+-------------+-----------------+--------------+------------+----------------+---------------------+-------------+------------+-----------------+----------+----------------+---------+
+| realtime_code_stats | InnoDB |      10 | Compact    | 1207098 |            176 |   212877312 |               0 |    259014656 | 1750073344 |      122267633 | 2019-09-24 09:37:09 | NULL        | NULL       | utf8_general_ci |     NULL |                |         |
++---------------------+--------+---------+------------+---------+----------------+-------------+-----------------+--------------+------------+----------------+---------------------+-------------+------------+-----------------+----------+----------------+---------+
+```
+- 查看执行过程
+set profiling=on;
+执行sql
+mysql> show profile;
++--------------------------------+----------+
+| Status                         | Duration |
++--------------------------------+----------+
+| starting                       | 0.000058 |
+| Waiting for query cache lock   | 0.000011 |
+| checking query cache for query | 0.000066 |
+| checking permissions           | 0.000012 |
+| Opening tables                 | 0.000024 |
+| System lock                    | 0.000013 |
+| init                           | 0.000042 |
+| optimizing                     | 0.000016 |
+| statistics                     | 0.000087 |
+| preparing                      | 0.000019 |
+| Creating tmp table             | 0.000043 |
+| executing                      | 0.000009 |
+| Copying to tmp table           | 0.761286 |
+| Sending data                   | 0.000364 |
+| end                            | 0.000022 |
+| removing tmp table             | 0.000021 |
+| end                            | 0.000012 |
+| query end                      | 0.000012 |
+| closing tables                 | 0.000019 |
+| freeing items                  | 0.000021 |
+| logging slow query             | 0.000010 |
+| cleaning up                    | 0.000011 |
+
+```
 #### 锁
 - 事务级别
 ```

@@ -154,6 +154,8 @@ select * from gp_segment_configuration;
 select * from pg_filespace_entry;
 
 ps aux|grep postgre|awk '{print $2}'|xargs kill
+
+ps -A -ostat,ppid,pid,cmd | grep -e'^[Zz]' | awk '{print $2}' |xargs kill -9 #杀僵尸进程
 ```
 
 sysctl kernel.xxx
@@ -169,6 +171,12 @@ https://blog.csdn.net/q936889811/article/details/85612046
 su - gpadmin
 psql -d DB -h host -p port -U username
 psql -d testdb -h bi-greenplum-node1 -p 5432 -U gpadmin
+
+ALTER DATABASE data_insight SET OPTIMIZER = ON ;
+
+SHOW  gp_resqueue_memory_policy; #查看配置
+SET gp_resqueue_memory_policy TO eager_free; #修改配置
+
 
 创建role
 \h CREATE ROLE
@@ -192,6 +200,9 @@ ALTER ROLE test1 RESOURCE QUEUE etl;
 CREATE ROLE name WITH LOGIN RESOURCE QUEUE queue_name;
 
 CREATE ROLE data_insight WITH LOGIN RESOURCE QUEUE pg_data;
+
+SELECT * FROM gp_toolkit.gp_resqueue_status; #查询队列使用情况
+
 
 赋予角色密码：
 ALTER ROLE data_insight WITH PASSWORD 'data_insi1206fTNdRWmG';
@@ -266,7 +277,7 @@ CREATE TABLE date_dictionary (
 ) with (APPENDONLY=true, BLOCKSIZE=1048576, OIDS=false) DISTRIBUTED BY (date);
 
 
-\d dim_company
+\d+ dim_company
 导出表结构：
 pg_dump -s --table=dws_clyq_product_d data_insight > dws_clyq_product_d.sql
 
@@ -381,6 +392,17 @@ FROM
     ) t1
 order by 3
 
+greenplum执行中sql查询
+SELECT
+  procpid,
+  now() - pg_stat_activity.query_start AS duration,
+  current_query,
+  client_addr,
+  waiting
+FROM pg_stat_activity
+WHERE waiting='f';
+
+
 greemplum表或索引大小 （占用空间）
 select pg_size_pretty(pg_relation_size('gp_test'));
 
@@ -441,6 +463,9 @@ where
        AND pg_class.relname= 'base_common'
 --     and pg_class.relname ~~* any(array['%some%', '%someelse']));
 order by  pg_attribute.attnum
+
+
+
 
 测试性能
 select function from generate_series(1,100000,1) g;
@@ -585,12 +610,14 @@ l  在命令运行：gpskew -t public.ate -a postgres
 
 10.  查看锁信息：
 
-SELECT locktype, database, c.relname, l.relation, l.transactionid, l.transaction, l.pid, l.mode, l.granted, a.current_query
-
+SELECT locktype, database, c.relname, l.relation, l.transactionid, l.virtualtransaction, l.pid, l.mode, l.granted, a.current_query
 FROM pg_locks l, pg_class c, pg_stat_activity a
-
 WHERE l.relation=c.oid AND l.pid=a.procpid
+ORDER BY c.relname;
 
+SELECT distinct locktype, d.datname, c.relname, l.relation, l.virtualtransaction, l.pid, l.mode, l.granted, a.current_query
+FROM pg_locks l, pg_class c, pg_stat_activity a, pg_database d
+WHERE l.relation=c.oid AND l.pid=a.procpid and l.database=d.oid
 ORDER BY c.relname;
 
 主要字段说明：

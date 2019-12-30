@@ -61,7 +61,7 @@ mybatis plus 启动顺序：
 MybatisPlusAutoConfiguration -》 MybatisSqlSessionFactoryBean -》 MybatisSqlSessionFactoryBean#afterPropertiesSet -》 MybatisSqlSessionFactoryBean#buildSqlSessionFactory
                 -》 MybatisXMLConfigBuilder -》 org.apache.ibatis.builder.BaseBuilder#getConfiguration -》 com.baomidou.mybatisplus.MybatisXMLConfigBuilder#parse
                 -》 匹配type alias记录到TypeAliasRegistry -》 org.apache.ibatis.type.TypeAliasRegistry#registerAliases(String packageName,
-                            Class<?> superType) -》org.apache.ibatis.io.ResolverUtil#find
+                            Class<?> superType) -》org.apache.ibatis.io.ResolverUtil#find  spring-boot集成mybatis需要指定spring boot VFS，因为DefaultVFS会校验if (name.indexOf(path) == 0) ，而spring boot直接打包文件以/BOOT-INF/classes/开头
                 -》 注册拦截器 -》 org.apache.ibatis.session.Configuration#addInterceptor
                 -》 注册mapper -》 org.springframework.core.io.support.PathMatchingResourcePatternResolver#getResources -》 org.apache.ibatis.builder.xml.XMLMapperBuilder#parse
                                     -》 org.apache.ibatis.builder.xml.XMLMapperBuilder#bindMapperForNamespace
