@@ -1,4 +1,6 @@
 # coding=utf-8
+from __future__ import print_function
+
 import csv
 from time import sleep
 import random
@@ -6,6 +8,9 @@ import time
 import numpy as np
 import pandas as pd
 import pickle
+import time
+
+print(time.time())
 
 from utils.performance import timerit
 

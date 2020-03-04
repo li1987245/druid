@@ -489,7 +489,10 @@ mysqldump -h 192.168.21.98 -udata_insight -pdata_insi1206fTNdRWmG data_insight d
 
 echo 'SELECT * FROM date_dictionary' | mysql -h 192.168.21.96 -P 3306 -B -udumper -pdumper@31nhf data_insight | sed "s/'/\'/;s/\t/\",\"/g;s/^/\"/;s/$/\"/;s/\n//g" > ~/date_dictionary.csv
 ```
-
+3. could not unlink file
+```
+set optimizer off时出现
+```
 
 
 
