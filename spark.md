@@ -595,6 +595,20 @@ yarn-cluster模式，默认读取spark-default.conf文件中的spark.executor.ex
 
 --conf "spark.driver.extraJavaOptions=-XX:PermSize=512m -XX:MaxPermSize=512m  -XX:+CMSClassUnloadingEnabled -XX:MaxTenuringThreshold=31 -XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled -XX:+UseCMSCompactAtFullCollection -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=10 -XX:+UseCompressedOops -XX:+PrintGC -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -XX:+PrintGCApplicationStoppedTime -XX:+PrintHeapAtGC -XX:+PrintGCApplicationConcurrentTime -verbose:gc -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/logs/ -Xloggc:/tmp/logs/gc1.log" \
 --conf "spark.executor.extraJavaOptions=-XX:NewSize=512m -XX:MaxNewSize=512m -XX:PermSize=512m -XX:MaxPermSize=512m  -XX:+CMSClassUnloadingEnabled -XX:MaxTenuringThreshold=31 -XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled -XX:+UseCMSCompactAtFullCollection -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=10 -XX:+UseCompressedOops -XX:+PrintGC -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -XX:+PrintGCApplicationStoppedTime -XX:+PrintHeapAtGC -XX:+PrintGCApplicationConcurrentTime -verbose:gc -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/logs/ -Xloggc:/tmp/logs/gc.log" \
+
+
+spark-submit --class org.apache.spark.examples.SparkPi \
+--master yarn \
+--deploy-mode cluster \
+--conf "spark.driver.extraJavaOptions=-XX:+UseG1GC -Dlog4j.configuration=log4j.properties" \
+--conf "spark.executor.extraJavaOptions=-XX:+UseG1GC -Dlog4j.configuration=log4j.properties" \
+--executor-memory 2G \
+--archives hdfs:///user/dap/monitor/jdk8/jdk-8u201-linux-x64.tar.gz \
+--files /home/jinwei.li/spark/conf/log4j.properties \
+--conf "spark.executorEnv.JAVA_HOME=./jdk-8u201-linux-x64.tar.gz/jdk1.8.0_201" \
+--conf "spark.yarn.appMasterEnv.JAVA_HOME=./jdk-8u201-linux-x64.tar.gz/jdk1.8.0_201" \
+/opt/spark/examples/jars/spark-examples*.jar 10
+
 ```
 
 - OOM分析
@@ -636,7 +650,7 @@ reduce端聚合内存大小默认为executor memory * 0.2，可增大内存或�
 3.reduce task向Driver中的MapOutputTracker获取shuffle file位置的时候出现了问题
 解决办法：
 1.增大Executor内存(即堆内内存) ，申请的堆外内存也会随之增加--executor-memory 5G
-2.增大堆外内存 --conf spark.yarn.executor.memoryoverhead 2048M  --conf spark.executor.memoryoverhead 2048M
+2.增大堆外内存 --conf spark.yarn.executor.memoryoverhead 2048M
 - Size exceeds Integer.MAX_VALUE
 ```
 spark 读取文件大小有2G限制，因为spark存储数据用的bytebuffer，大小为Integer.MAX_VALUE
