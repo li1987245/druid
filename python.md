@@ -11,12 +11,25 @@ file->setting->project interpreter->add local
 设置路径为$ANACONDA_HOME/python.exe
 3.基本使用
 切换版本：canda python=3.6
+
 安装python包：
 conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
 conda config --set show_channel_urls yes
 conda create -n tensorflow python=3.5
 activate tensorflow
-pip install --ignore-installed --upgradehttps://storage.googleapis.com/tensorflow/windows/cpu/tensorflow-0.12.0-cp35-cp35m-win_amd64.whl
+pip install --ignore-installed --upgrade https://storage.googleapis.com/tensorflow/windows/cpu/tensorflow-0.12.0-cp35-cp35m-win_amd64.whl
+//linux
+conda create -n pyspark python=3.6 ipython pyspark jupyter
+conda activate pyspark
+1.CommandNotFoundError: Your shell has not been properly configured to use 'conda activate'.
+执行source activate和source deactivate再执行conda activate PySpark
+2.jupyter socket.error: [Errno 99] Cannot assign requested address
+a)jupyter notebook --generate-config
+b)vim /home/spark/.jupyter/jupyter_notebook_config.py,去掉注释，修改为自己的端口
+    c.NotebookApp.ip = '127.0.0.1'
+    c.NotebookApp.port = 8888
+    c.NotebookApp.open_browser = True
+
 - jupyter
 1. 安装
 ```
@@ -27,7 +40,20 @@ python3 -m pip install jupyter
 jupyter notebook
 3. 安装扩展
 ```
-pip install jupyter_contrib_nbextensions
+pip install jupyter_contrib_nbextensions -i http://pypi.douban.com/simple --trusted-host pypi.douban.com
+jupyter contrib nbextension install --user
+pip install jupyter_nbextensions_configurator
+
+jupyter contrib nbextension uninstall
+pip uninstall jupyter_contrib_nbextensions
+pip uninstall jupyter_nbextensions_configurator
+```
+4. 增加kernel
+```
+1.anaconda切换环境，activate xxx，pip install ipykernel
+2.python -m ipykernel install --name xxx
+3.jupyter kernelspec list
+4.jupyter kernelspec remove kernel名称
 ```
 
 ### numpy

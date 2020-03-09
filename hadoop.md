@@ -1211,9 +1211,18 @@ mapreduce.reduce.java.opts             = 0.8 * 2 * 3630 MB
 ```
 3. User [dr.who] is not authorized to view the logs
 ```
-added in Ambari > HDFS > Configurations >Advanced core-site > Add Property
+1.added in Ambari > HDFS > Configurations >Advanced core-site > Add Property
 hadoop.http.staticuser.user=yarn
 hadoop.security.authorization=false
+
+2.解决：
+在yarn的配置中设置yarn.admin.acl参数的值，该参数默认值为 * ，将dr.who添加进去，重启相应服务即可。
+
+多余的话：
+yarn.admin.acl 参数的含义为：谁可以成为YARN集群的管理员的ACL。该参数的定义格式为：逗号分隔的用户列表＋空格＋以逗号分隔的用户组列表。如下：user1,user2 group1,group2。当然也可以，直接写用户，不写用户组。
+也许有人会问，这个dr.who是什么东东呢？其实它是hadoop.http.staticuser.user默认的值。
+hadoop.http.staticuser.user=dr.who
+在网页界面访问数据使用的用户名。默认值是一个不真实存在的用户，此用户权限很小，不能访问不同用户的数据。这保证了数据安全。也可以设置为hdfs和hadoop等具有较高权限的用户，但会导致能够登陆网页界面的人能看到其它用户数据。实际设置请综合考虑。如无特殊需求。使用默认值就好。
 ```
 4. There appears to be a gap in the edit log.  We expected txid 350941, but got txid 350942.
 ```

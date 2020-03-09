@@ -235,6 +235,15 @@ df.createOrReplaceTempView('web_site')
 sqlDF=spark.sql('select * from web_site limit 1')
 sqlDF.show()
 ```
+- explode
+```
+df.withColumn("splitted",split(col("Description")," "))
+.withColumn("exploded",explode(col("splitted")))
+.select("Description","InvoiceNo","exploded").show(2)
+spark.sql("select Description,InvoiceNo,exploded from
+(select *,split(Description,' ') as splitted from dfTable)
+ lateral view explode(splitted) as exploded").show(2)
+```
 - spark sql
 ```markdown
 spark-sql --driver-java-options "-Dlog4j.debug  -Dlog4j.configuration=file:///home/jinwei.li/spark/conf/log4j.properties" --conf spark.ui.enabled=false

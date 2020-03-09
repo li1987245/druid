@@ -34,6 +34,15 @@ docker container rm jdk
 ```
 
 ```
+- docker 镜像
+```
+1.主机A有镜像nginx，版本为v1.0版本。执行命令：
+docker save nginx:v1.0 -o /root/nginx.tar ---> 将nginx:v1.0保存为nginx.tar包
+2.通过scp命令将nginx.tar包拷贝给主机B。
+3.在主机B上执行命令：
+docker load -i /root/nginx.tar ---> 从nginx.tar包load为镜像nginx:v1.0
+注意：执行docker save nginx:v1.0 -o /root/nginx.tar命令，如果不加版本v1.0，会将主机A上所有版本nginx镜像都save到一个nginx.tar包。
+```
 
 - k8s 组件
 ```
@@ -70,3 +79,26 @@ kubectl attach kube-dns-v9-rcfuk -c skydns —namespace=kube-system #直接查�
 kubectl exec -it jdk bash #类似于docker的exec命令，有多个容器，需要使用-c选项指定容器
 
 ```
+#### 事故排查
+
+-
+1.
+
+```
+检测本地环境变量是否是UTF-8
+locale
+LANG=en_US.UTF-8
+检测文件编码格式
+apt-get install enca 检测编码格式
+enca -i -L chinese test.txt 检测文件格式
+enca -x UTF8 -L chinese test.txt    把文件转化成UTF8格式
+iconv -f GBK -t UTF-8 file1 -o file2    把文件转化成UTF8格式
+```
+
+egrep \W gpdb-2020-01-09_000000.csv|less
+
+
+SELECT
+select * from gp_toolkit.gp_log_database limit 10;
+
+List arrayList = new ArrayList(n); //设置初始容量，容量扩容公式 ((旧容量 * 3) / 2) + 1
