@@ -37,6 +37,15 @@ spark.yarn.jars=hdfs:///tmp/spark/lib_jars/*.jar
 spark.executor.memory=512m
 spark.serializer=org.apache.spark.serializer.KryoSerializer
 ```
+- External Shuffle Service
+```
+1.Build Spark with the YARN profile. Skip this step if you are using a pre-packaged distribution.
+2.Locate the spark-<version>-yarn-shuffle.jar. This should be under $SPARK_HOME/common/network-yarn/target/scala-<version> if you are building Spark yourself, and under yarn if you are using a distribution.
+3.Add this jar to the classpath of all NodeManagers in your cluster.
+4.In the yarn-site.xml on each node, add spark_shuffle to yarn.nodemanager.aux-services, then set yarn.nodemanager.aux-services.spark_shuffle.class to org.apache.spark.network.yarn.YarnShuffleService.
+5.Increase NodeManager's heap size by setting YARN_HEAPSIZE (1000 by default) in etc/hadoop/yarn-env.sh to avoid garbage collection issues during shuffle.
+6.Restart all NodeManagers in your cluster.
+```
 - Dynamic Resource Allocation
 ```
 http://spark.apache.org/docs/latest/job-scheduling.html#dynamic-resource-allocation
