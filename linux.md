@@ -20,3 +20,47 @@ Working Set Size(WSS)是指一个app保持正常运行所须的内存
 当不同的进程使用同一段代码时，比如库文件的代码，在物理内存中可以只存储一份这样的代码，不同进程只要将自己的虚拟内存映射过去就好了，这样可以节省物理内存
 在程序需要分配连续空间的时候，只需要在虚拟内存分配连续空间，而不需要物理内存时连续的，实际上，往往物理内存都是断断续续的内存碎片。这样就可以有效地利用我们的物理内存
 ```
+- shell
+```
+#/bin/bash
+
+echo "error" >&2 #输出到错误输出
+echo "info" >&1 #输出到标准输出
+```
+
+- kill
+```
+向进程发送信号kill
+向进程发送控制信号，以实现对进程管理,每个信号对应一个数字，信号名称以SIG开头（可省略）， 不区分大小写。如果我们想要查看当前进程的可用信号可以使用kill –l或者trap –l，常用的信号我们可以使用使用man 7 kill来进行查看。
+命令格式：
+kill [-s signal|-p] [-q sigval] [-a] [--] pid...
+命令信号：
+1/SIGHUP: 无须关闭进程而让其重读配置文件
+2/SIGINT: 中止正在运行的进程；相当于Ctrl+c
+3/SIGQUIT:相当于ctrl+
+9/SIGKILL: 强制杀死正在运行的进程
+15/SIGTERM：终止正在运行的进程
+18/SIGCONT：继续运行
+19/SIGSTOP：后台休眠
+指定信号的方法：
+  (1) 信号的数字标识： 1, 2, 9
+  (2) 信号完整名称： SIGHUP
+  (3) 信号的简写名称： HUP
+我们一般给进程发送信号的方法是kill [-SIGNAL] pid,比如：
+kill –n 9 pid 或者 kill -9 pid 强制杀死该进程
+kill –s HUP pid 重新读取配置文件
+除了使用pid来对进程发信号以外，我们还可以使用按照进程名称的方式给进程发信号。
+killall [-SIGNAL] process_name（默认杀死该名称的所有进程）
+```
+
+- 文件编码转换
+```
+检测本地环境变量是否是UTF-8
+locale
+LANG=en_US.UTF-8
+检测文件编码格式
+apt-get install enca 检测编码格式
+enca -i -L chinese test.txt 检测文件格式
+enca -x UTF8 -L chinese test.txt    把文件转化成UTF8格式
+iconv -f GBK -t UTF-8 file1 -o file2    把文件转化成UTF8格式
+```

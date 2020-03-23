@@ -228,7 +228,7 @@ java -verbose:jni
 ```
 jar uf test.jar com\test\Test.class
 ```
-
+List arrayList = new ArrayList(n); //设置初始容量，容量扩容公式 ((旧容量 * 3) / 2) + 1
 #### spring
 ##### 启动
 - 默认加载类

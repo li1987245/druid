@@ -336,6 +336,9 @@ SELECT * FROM gp_toolkit.gp_locks_on_resqueue WHERE lorwaiting='true';
 查看greemplum资源队列优先级
 select *  from gp_toolkit.gp_resq_priority_statement;
 
+查询日志（可以到master日志上去查看sql记录）
+SELECT select * from gp_toolkit.gp_log_database limit 10;
+
 查看greemplum所有连接 类似mysql SHOW PROCESSLIST
 select * from pg_stat_activity; -- 所有状态的连接
 
