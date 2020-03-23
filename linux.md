@@ -64,3 +64,8 @@ enca -i -L chinese test.txt 检测文件格式
 enca -x UTF8 -L chinese test.txt    把文件转化成UTF8格式
 iconv -f GBK -t UTF-8 file1 -o file2    把文件转化成UTF8格式
 ```
+- sudo
+```
+
+用户 ALL=(ALL)       NOPASSWD:  /bin/su - 切换用户
+```
