@@ -392,6 +392,8 @@ FROM
     ) t1
 order by 3
 
+当前连接数
+select count(1) from pg_stat_activity;
 greenplum执行中sql查询
 SELECT
   procpid,
@@ -401,6 +403,14 @@ SELECT
   waiting
 FROM pg_stat_activity
 WHERE waiting='f';
+
+杀掉锁住表的进程
+方式一:
+SELECT pg_cancel_backend(PID);
+这种方式只能kill select查询，对update、delete 及DML不生效
+方式二:
+SELECT pg_terminate_backend(PID);
+这种可以kill掉各种操作(select、update、delete、drop等)操作
 
 
 greemplum表或索引大小 （占用空间）
@@ -493,8 +503,35 @@ echo 'SELECT * FROM date_dictionary' | mysql -h 192.168.21.96 -P 3306 -B -udumpe
 ```
 set optimizer off时出现
 ```
+4. connection limit exceeded for non-superusers
+现象：
+普通用户操作psql报错，connection limit exceeded for non-superusers
+分析过程：
+1.查询当前连接数（已达到最大连接数限制）
+select count(1) from pg_stat_activity;
+netstat -nap|grep 5432 （发现连接都来自BI系统，后经过排查数据源配置有问题未使用连接池，而gp堵塞后【资源队列大小设置的20】，每次请求都建立新的连接）
+2.查询执行中sql，有sql执行了9小时
+SELECT
+  *
+FROM pg_stat_activity ;
 
+298307 | 09:13:30.830907 | SELECT COUNT(1) from xxx | ip | f
 
+3.查看死锁
+select * from pg_stat_activity where waiting_reason='lock';
+
+4.查看死锁信息
+select a.locktype,b.relname,substring(c.current_query,1,100),c.xact_start,a.pid,a.mode,a.granted from pg_locks a,pg_class b,pg_stat_activity c
+where a.relation = b.oid and a.pid = c.procpid and b.relname like '%xxx%';
+
+select a.locktype,a.pid,a.gp_segment_id,b.relname,substring(c.current_query,1,100),c.xact_start,a.pid,a.mode,a.granted from pg_locks a,pg_class b,pg_stat_activity c
+where a.relation = b.oid and a.pid = c.procpid and a.pid='123';
+
+解决方案：
+1.杀掉锁住表的进程
+SELECT pg_cancel_backend(PID);
+这种方式只能kill select查询，对update、delete 及DML不生效
+2.合理增加max_connections设定值
 
 
 

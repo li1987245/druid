@@ -30,6 +30,13 @@ b)vim /home/spark/.jupyter/jupyter_notebook_config.py,去掉注释，修改为�
     c.NotebookApp.port = 8888
     c.NotebookApp.open_browser = True
 
+- 打包可执行zip
+```
+在项目文件夹下增加__main__.py文件作为程序如口
+python -m zipfile -c zip包名称.zip 项目名/*
+python -m zipfile -c helloword.zip helloword/*
+调用python 文件名，或python zip名称.zip
+```
 - jupyter
 1. 安装
 ```

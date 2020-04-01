@@ -22,6 +22,6 @@ Working Set Size(WSS)是指一个app保持正常运行所须的内存
 ```
 - sudo
 ```
-
 用户 ALL=(ALL)       NOPASSWD:  /bin/su - 切换用户
+admin           ALL=(ALL)       NOPASSWD: /bin/su - [A-Za-z]*,!/bin/su - root,!/bin/su -
 ```
