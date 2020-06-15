@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 
+import matplotlib.pyplot as plt
 from pyspark import SparkContext, SparkConf, StorageLevel
 from pyspark.sql import SQLContext
 from pyspark.sql.functions import udf, explode, split, concat_ws
@@ -36,7 +37,7 @@ df = spark.read \
     .option("password", "data_insight_sdY9dTsd8l2") \
     .option("driver","com.mysql.jdbc.Driver") \
     .load()
-df.persist()
+df.cache()
 print(df.count())
 """
 statis_month,statis_quarter,api_code,comp_id,comp_name,comp_zone,comp_type_crm,
@@ -44,4 +45,6 @@ product_id,product_type,price,api_type,product_code,product_name
 req_v_cnt,req_v_user,res_v_cnt,res_v_user,fee_cnt,fee_req,cost_req,income_req,cost_total
 """
 # df.describe("req_v_cnt","req_v_user","res_v_cnt","res_v_user","fee_cnt","fee_req","cost_req","income_req","cost_total").show()
-df.describe().show()
+# df.describe().show()
+req_users = df.rdd.map(lambda p:p.req_v_user).collect()
+plt.hist(req_users,bins=20,normed=True)

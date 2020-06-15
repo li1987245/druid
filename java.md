@@ -55,6 +55,12 @@ public class Test {
 解决方案：通过加大内存或排除代码问题（死循环等）
 ```
 
+3. java.lang.IllegalStateException: zip file closed
+```
+a single java.util.zip.ZipFile instance being used in multiple threads
+ZipFile非线程安全
+```
+
 - mybatis
 ```
 mybatis plus 启动顺序：
@@ -96,6 +102,11 @@ http://ip:7000/
 ```
 - java 打印jvm参数
 ```
+标准参数
+java
+非标准参数（-X）
+java -X
+非Stable参数（-XX）
 java -XX:+PrintFlagsFinal -version | grep ThreadStackSize
 ```
 - jmap
@@ -146,6 +157,9 @@ java -**
 -XX:TLABWasteTargetPercent  设置TLAB空间所占用Eden空间的百分比大小 默认是1%
 -XX:+PrintTLAB 查看TLAB信息
 -XX:ResizeTLAB 自调整TLABRefillWasteFraction阈值。
+
+默认堆大小
+java -XX:+PrintFlagsFinal -version | grep HeapSize
 ```
 - java cms
 ```
@@ -208,6 +222,7 @@ concurrent mode failure CMS GC失败
 -XX:+UseG1GC    使用G1回收器
 -XX:MaxGCPauseMillis    设置最大垃圾收集停顿时间
 -XX:GCPauseIntervalMillis   设置停顿间隔时间
+-XX:-G1UseAdaptiveIHOP and -XX:InitiatingHeapOccupancyPercent 设置触发标记周期的 Java 堆占用率阈值。默认占用率是整个 Java 堆的 45%，G1UseAdaptiveIHOP为jdk9新增
 ```
 - java jni
 ```
@@ -229,6 +244,54 @@ java -verbose:jni
 jar uf test.jar com\test\Test.class
 ```
 List arrayList = new ArrayList(n); //设置初始容量，容量扩容公式 ((旧容量 * 3) / 2) + 1
+
+
+- jmeter
+```
+jmeter -n -t 脚本绝对路径名.jmx -l  要保存的结果绝对路径名.jtl -H 192.168.116.128 -P 2099
+```
+- tcp/ip异常
+```
+1 java.net.SocketTimeoutException .
+这 个异 常比较常见，socket 超时。一般有 2 个地方会抛出这个，一个是 connect 的 时 候 ， 这 个 超 时 参 数 由connect(SocketAddress endpoint,int timeout) 中的后者来决定，还有就是 setSoTimeout(int timeout)，这个是设定读取的超时时间。它们设置成 0 均表示无限大。
+2 java.net.BindException:Address already in use: JVM_Bind
+该 异 常 发 生 在 服 务 器 端 进 行 new ServerSocket(port) 或者 socket.bind(SocketAddress bindpoint)操作时。
+原因:与 port 一样的一个端口已经被启动，并进行监听。此时用 netstat –an 命令，可以看到一个 Listending 状态的端口。只需要找一个没有被占用的端口就能解决这个问题。
+3 java.net.ConnectException: Connection refused: connect
+该异常发生在客户端进行 new Socket(ip, port)或者 socket.connect(address,timeout)操作时，原 因:指定 ip 地址的机器不能找到（也就是说从当前机器不存在到指定 ip 路由），或者是该 ip 存在，但找不到指定的端口进行监听。应该首先检查客户端的 ip 和 port是否写错了，假如正确则从客户端 ping 一下服务器看是否能 ping 通，假如能 ping 通（服务服务器端把 ping 禁掉则需要另外的办法），则 看在服务器端的监听指定端口的程序是否启动。
+4 java.net.SocketException: Socket is closed
+该异常在客户端和服务器均可能发生。异常的原因是己方主动关闭了连接后（调用了 Socket 的 close 方法）再对网络连接进行读写操作。
+5 java.net.SocketException: Connection reset 或者Connect reset by peer:Socket write error
+该异常在客户端和服务器端均有可能发生，引起该异常的原因有两个
+第一个就是假如一端的 Socket 被关闭（或主动关闭或者因为异常退出而引起的关闭）， 另一端仍发送数据，发送的第一个数据包引发该异常(Connect reset by peer)。
+另一个是一端退出，但退出时并未关闭该连接，另 一 端 假 如 在 从 连 接 中 读 数 据 则 抛 出 该 异 常（Connection reset）。简单的说就是在连接断开后的读和写操作引起的。
+还有一种情况，如果一端发送RST数据包中断了TCP连接，另外一端也会出现这个异常，如果是tomcat，异常如下：
+org.apache.catalina.connector.ClientAbortException: java.io.IOException: Connection reset by peer
+阿里的tcp方式的健康检查为了提高性能，省去挥手交互，直接发送一个RST来终断连接，就会导致服务器端出现这个异常；
+对于服务器，一般的原因可以认为：
+a) 服务器的并发连接数超过了其承载量，服务器会将其中一些连接主动 Down 掉.
+b) 在数据传输的过程中，浏览器或者接收客户端关闭了，而服务端还在向客户端发送数据。
+6 java.net.SocketException: Broken pipe
+该异常在客户端和服务器均有可能发生。在抛出SocketExcepton:Connect reset by peer:Socket write error 后，假如再继续写数据则抛出该异常。
+前两个异常的解决方法是首先确保程序退出前关闭所有的网络连接，其次是要检测对方的关闭连接操作，发现对方 关闭连接后自己也要关闭该连接。
+长连接需要做的就是：
+a) 检测对方的主动断连（对方调用了 Socket 的 close 方法）。因为对方主动断连，另一方如果在进行读操作，则此时的返回值是-1。所以一旦检测到对方断连，则主动关闭己方的连接（调用 Socket 的 close 方法）。
+b) 检测对方的宕机、异常退出及网络不通,一般做法都是心跳检测。双方周期性的发送数据给对方，同时也从对方接收“心跳数据”，如果连续几个周期都没有收到 对方心跳，则可以判断对方或者宕机或者异常退出或者网络不通，此时也需要主动关闭己方连接；如果是客户端可在延迟一定时间后重新发起连接。虽然 Socket 有一个keep alive 选项来维护连接，如果用该选项，一般需要两个小时才能发现对方的宕机、异常退出及网络不通。
+7 java.net.SocketException: Too many open files
+原因: 操作系统的中打开文件的最大句柄数受限所致，常常发生在很多个并发用户访问服务器的时候。因为为了执行每个用户的应用服务器都要加载很多文件(new 一个socket 就需要一个文件句柄)，这就会导致打开文件的句柄的缺乏。
+解决方式：
+a) 尽量把类打成 jar 包，因为一个 jar 包只消耗一个文件句柄，如果不打包，一个类就消耗一个文件句柄。
+b) java 的 GC 不能关闭网络连接打开的文件句柄，如果没有执行 close()则文件句柄将一直存在，而不能被关闭。
+也可以考虑设置 socket 的最大打开 数来控制这个问题。对操作系统做相关的设置，增加最大文件句柄数量。
+ulimit -a 可以查看系统目前资源限制，ulimit -n 10240 则可以修改，这个修改只对当前窗口有效。
+8 Cannot assign requested address
+1. 端口号被占用,导致地址无法绑定：
+java.net.BindException: Cannot assign requested address: bind：是由于IP地址变化导致的；
+2. 服务器网络配置异常：
+/etc/hosts  中配置的地址错误;
+3.还有一种情况是执行ipconfig 发现没有环路地址，这是因为环路地址配置文件丢失了;、
+```
+
 #### spring
 ##### 启动
 - 默认加载类
