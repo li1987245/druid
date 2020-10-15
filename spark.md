@@ -387,6 +387,9 @@ Fair调度器采用了一套基于规则的系统来确定应用应该放到哪�
 <rule name="specified" />
 <rule name="user" />
 </queuePlacementPolicy>
+
+8. Caused by: java.lang.IllegalArgumentException: Wrong FS: hdfs://brcluster/user/loan/batch_process_result/.hive-staging_hive_2020-10-15_20-28-46_793_8703393745638456305-1/-ext-10000/part-00000-1b24b5af-4db9-4d76-8342-ffe329cd985b-c000, expected: hdfs://m20p13
+Hadoop配置文件core-site.xml中的fs.defaultFS 和hive配置文件hive-sit.xml中的hive.metastore.warehouse.dir和spark配置中的spark.sql.warehouse.dir不一致导致
 ```
 -
 ```java引用scala类提示，程序包com.br.rule.broadcast不存在
