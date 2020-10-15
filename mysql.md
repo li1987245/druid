@@ -191,6 +191,44 @@ Note：RR隔离级别下，为了减少Next-key lock可以设置innodb_locks_uns
 使用innodb_lock_monitor需要创建表： （任意DB中，不使用时drop此表）CREATE TABLE innodb_lock_monitor(a INT) ENGINE=INNODB;
 InnoDB monitor有：innodb_monitor，innodb_lock_monitor，innodb_table_monitor，innodb_tablespace_monitor，开启后定期执行将结果输出到errorlog（前2个20s，后两个60s，Note：不使用时注意drop相关表，停止monitor）
 5.5版本以后，使用information_schema中相关表 innodb_trx
+mysql> show OPEN TABLES where In_use > 0;
++---------------------+---------------------+--------+-------------+
+| Database            | Table               | In_use | Name_locked |
++---------------------+---------------------+--------+-------------+
+| data_insight_manage | uc_role             |      8 |           0 |
+| data_insight_manage | uc_cas_relationship |      1 |           0 |
+| data_insight_manage | uc_user_role        |      8 |           0 |
+| data_insight_manage | das_board           |      2 |           0 |
+| data_insight_manage | das_category        |      1 |           0 |
+| data_insight_manage | uc_resource         |      8 |           0 |
+| data_insight_manage | uc_role_resource    |      8 |           0 |
+| data_insight_manage | uc_user             |     15 |           0 |
+| data_insight_manage | uc_das_common_log   |      8 |           0 |
++---------------------+---------------------+--------+-------------+
+mysql> show status like '%lock%';
++------------------------------------------+-------------+
+| Variable_name                            | Value       |
++------------------------------------------+-------------+
+| Com_lock_tables                          | 0           |
+| Com_unlock_tables                        | 0           |
+| Handler_external_lock                    | 0           |
+| Innodb_row_lock_current_waits            | 2           |
+| Innodb_row_lock_time                     | 903676117   |
+| Innodb_row_lock_time_avg                 | 1246        |
+| Innodb_row_lock_time_max                 | 51681       |
+| Innodb_row_lock_waits                    | 725225      |
+| Key_blocks_not_flushed                   | 6           |
+| Key_blocks_unused                        | 427463      |
+| Key_blocks_used                          | 9452        |
+| Performance_schema_locker_lost           | 0           |
+| Performance_schema_rwlock_classes_lost   | 0           |
+| Performance_schema_rwlock_instances_lost | 0           |
+| Qcache_free_blocks                       | 10533       |
+| Qcache_total_blocks                      | 76680       |
+| Table_locks_immediate                    | 11454814541 |
+| Table_locks_waited                       | 3841        |
++------------------------------------------+-------------+
+mysql> show engine innodb status \G
 ```
 
 - binlog

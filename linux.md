@@ -66,6 +66,6 @@ iconv -f GBK -t UTF-8 file1 -o file2    把文件转化成UTF8格式
 ```
 - sudo
 ```
-
 用户 ALL=(ALL)       NOPASSWD:  /bin/su - 切换用户
+admin           ALL=(ALL)       NOPASSWD: /bin/su - [A-Za-z]*,!/bin/su - root,!/bin/su -
 ```

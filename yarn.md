@@ -74,3 +74,7 @@ org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedul
 可通过配置yarn.scheduler.capacity.per-node-heartbeat.maximum-container-assignments限制每次心跳可分配container数量
 （yarn.scheduler.capacity.per-node-heartbeat.multiple-assignments-enabled标识表示是否开启单次心跳多次分配）
 ```
+- yarn log目录
+```
+yarn.nodemanager.log-dirs=
+```

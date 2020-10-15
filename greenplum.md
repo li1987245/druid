@@ -395,6 +395,8 @@ FROM
     ) t1
 order by 3
 
+当前连接数
+select count(1) from pg_stat_activity;
 greenplum执行中sql查询
 SELECT
   procpid,
@@ -404,6 +406,14 @@ SELECT
   waiting
 FROM pg_stat_activity
 WHERE waiting='f';
+
+杀掉锁住表的进程
+方式一:
+SELECT pg_cancel_backend(PID);
+这种方式只能kill select查询，对update、delete 及DML不生效
+方式二:
+SELECT pg_terminate_backend(PID);
+这种可以kill掉各种操作(select、update、delete、drop等)操作
 
 
 greemplum表或索引大小 （占用空间）
@@ -417,6 +427,8 @@ select pg_size_pretty(pg_database_size('postgres'));
 
 greemplum所有数据库大小（占用空间）
 select datname,pg_size_pretty(pg_database_size(datname)) from pg_database;
+每个分区的大小
+select schemaname,tablename,partitiontablename,round(sum(pg_total_relation_size(schemaname || '.' || partitiontablename))/1024/1024) "MB" from pg_partitions where schemaname='public' and tablename='dws_api_dts_field_hit_d_01' group by 1,2,3;
 
 查看greemplum数据分布情况
 select gp_segment_id,count(*) from gp_test group by gp_segment_id order by 1;
@@ -496,6 +508,85 @@ echo 'SELECT * FROM date_dictionary' | mysql -h 192.168.21.96 -P 3306 -B -udumpe
 ```
 set optimizer off时出现
 ```
+4. connection limit exceeded for non-superusers
+现象：
+普通用户操作psql报错，connection limit exceeded for non-superusers
+分析过程：
+1.查询当前连接数（已达到最大连接数限制）
+select count(1) from pg_stat_activity;
+netstat -nap|grep 5432 （发现连接都来自BI系统，后经过排查数据源配置有问题未使用连接池，而gp堵塞后【资源队列大小设置的20】，每次请求都建立新的连接）
+2.查询执行中sql，有sql执行了9小时
+SELECT
+  *
+FROM pg_stat_activity ;
+
+298307 | 09:13:30.830907 | SELECT COUNT(1) from xxx | ip | f
+
+3.查看死锁
+select * from pg_stat_activity where waiting_reason='lock';
+
+4.查看死锁信息
+select a.locktype,b.relname,substring(c.current_query,1,100),c.xact_start,a.pid,a.mode,a.granted from pg_locks a,pg_class b,pg_stat_activity c
+where a.relation = b.oid and a.pid = c.procpid and b.relname like '%xxx%';
+
+select a.locktype,a.pid,a.gp_segment_id,b.relname,substring(c.current_query,1,100),c.xact_start,a.pid,a.mode,a.granted from pg_locks a,pg_class b,pg_stat_activity c
+where a.relation = b.oid and a.pid = c.procpid and a.pid='123';
+
+解决方案：
+1.杀掉锁住表的进程
+SELECT pg_cancel_backend(PID);
+这种方式只能kill select查询，对update、delete 及DML不生效
+2.合理增加max_connections设定值
+5. ERROR:  Used length 2097152 greater than bufferLen 2097148 at position 0
+```
+ao表设置blocksize为2097152报错，调整成8192的255倍数
+BLOCKSIZE，8192 – 2097152，该值必须是8192的倍数。
+WITH (appendonly=true,blocksize=2088960)
+```
+3. the database system is starting up
+```
+standby master 无法直接查询
+后经检查，是postgresql.conf中hot_standby没有设置：
+hot_standby = on
+```
+
+
+
+实践：
+
+使用常用关联键作为分布键（前提是分布键可以使数据分布均匀）
+
+使用关联键作为分布键可以避免表关联时数据重分布，每个数据分片都在数据所在segment本地关联执行，更好的发挥GP MPP并行执行的优势
+
+下面语句把dws_fk_product_d的分布键由修改为后，查询时间由13442.901 ms降到4113.465 ms
+data_insight=> explain analyze SELECT a.api_type AS c_0, coalesce(b.comp_id, '-') AS c_1, a.api_code AS c_2 , coalesce(b.comp_name, '-') AS c_3 , coalesce(b1.is_apply_loan, '-') AS c_4, b1.user_type AS c_5 , coalesce(b.code_type, '1') AS c_6, a.api_type2 AS c_7 , coalesce(b.comp_type1_cw, '-') AS c_8 , coalesce(b.comp_type2_cw, '-') AS c_9 , coalesce(b.category_business_code, '-') AS c_10 , coalesce(b.license_type, '-') AS c_11 , coalesce(c.pro_id, a.product_id) AS c_12 , coalesce(c.code, a.product_code) AS c_13 , coalesce(c.name, '-') AS c_14 , coalesce(c.pro_ver, a.product_version) AS c_15 , CASE WHEN a.api_type IN ('api_cl', 'api_yz') AND a.api_type2 IN ('STR', 'MCP') AND NOT lower(a.product_code) ~ '^(rule|score)' THEN '1' ELSE '0' END AS c_16, coalesce(b.level1) AS c_17, coalesce(b.tag1) AS c_18 , sum(a.req_cnt) AS c_19, sum(a.req_user) AS c_20 , sum(req_cnt)-sum(req_v_cnt) AS c_21, sum(a.req_v_cnt) AS c_22, sum(a.req_v_user) AS c_23 , sum(a.res_v_cnt) AS c_24, sum(a.res_v_user) AS c_25 , case when sum(req_v_user) = 0 then 0 else sum(res_v_user)/sum(req_v_user) ::float8 end AS c_26 FROM dws_fk_product_d a JOIN dim_company b ON a.api_code = b.api_code LEFT JOIN dim_merchant b1 ON a.api_code = b1.api_code AND a.api_type = b1.api_type AND b1.api_type IN ( 'api_hx', 'api_hn', 'api_zh', 'api_cl', 'api_yz', 'dz_cl', 'api_biz' ) AND ((b1.api_type = 'api_hx' AND b1.api_ver = '4') OR b1.api_type != 'api_hx') LEFT JOIN dim_product_api c ON lower(a.product_code) = c.code_lower AND a.api_type = c.api_type AND CASE WHEN a.product_version = '' THEN '1.0' ELSE a.product_version END = CASE WHEN c.pro_ver = '' THEN '1.0' ELSE c.pro_ver END WHERE a.product_code NOT IN ('score', 'loanStrategy') AND a.meal_type IN ('1') AND coalesce(c.code, a.product_code) NOT IN ('All') AND a.api_type2 NOT IN ('All') AND CASE WHEN a.api_type IN ('api_cl', 'api_yz') AND a.api_type2 IN ('STR', 'MCP') AND NOT lower(a.product_code) ~ '^(rule|score)' THEN '1' ELSE '0' END IN ('0') AND a.req_type IN ('All') AND a.statis_date >= '20170501' AND a.statis_date <= '20200511' AND coalesce(b.code_type, '1') IN ('3') AND b1.user_type IN ('1') AND coalesce(b.comp_name, '-') IN ('中国银行股份有限公司') AND coalesce(b.comp_id, '-') IN ('997') GROUP BY a.api_type, coalesce(b.comp_id, '-'), a.api_code, coalesce(b.comp_name, '-'), coalesce(b1.is_apply_loan, '-'), b1.user_type, coalesce(b.code_type, '1'), a.api_type2, coalesce(b.comp_type1_cw, '-'), coalesce(b.comp_type2_cw, '-'), coalesce(b.category_business_code, '-'), coalesce(b.license_type, '-'), coalesce(c.pro_id, a.product_id), coalesce(c.code, a.product_code), coalesce(c.name, '-'), coalesce(c.pro_ver, a.product_version), CASE WHEN a.api_type IN ('api_cl', 'api_yz') AND a.api_type2 IN ('STR', 'MCP') AND NOT lower(a.product_code) ~ '^(rule|score)' THEN '1' ELSE '0' END, coalesce(b.level1), coalesce(b.tag1) LIMIT 10 OFFSET 0;
+
+参考信息：
+数据是否分布均匀可以通过 Select gp_segment_id,count(*) from ${tablename} group by 1 查看
+
+
+定期对大表进行ANALYZE，尤其在批量新增和删除大量数据情况下
+
+gp在做关联查询时，如果表没有根据分布键做关联，会进行数据重分布或者广播，优化器根据影响的数据量判断查询重分布代价更小还是广播代价更小，同时会判断是对哪张表进行操作代价更小
+
+假设GP（segment个数为k）中t1（数据量为M）关联t2（数据量为N），且不是使用分布键进行关联，那么GP优化器会通过如下公式计算出代价最小的方式进行处理，M和N是GP记录的统计信息，可以通过ANALYZE更新信息，进一步提升优化器判断准确性
+重分布t1的代价为M，广播t2的代价为N*k
+重分布t2的代价为N，广播t1的代价为M*k
+t1和t2都需要重分布的代价为M+N（t1和t2关联键都不为分布键）
+
+下面语句通过ANALYZE dws_fk_product_d后，查询时间由13442.901 ms降到3376.870 ms
+data_insight=> explain analyze SELECT a.api_type AS c_0, coalesce(b.comp_id, '-') AS c_1, a.api_code AS c_2 , coalesce(b.comp_name, '-') AS c_3 , coalesce(b1.is_apply_loan, '-') AS c_4, b1.user_type AS c_5 , coalesce(b.code_type, '1') AS c_6, a.api_type2 AS c_7 , coalesce(b.comp_type1_cw, '-') AS c_8 , coalesce(b.comp_type2_cw, '-') AS c_9 , coalesce(b.category_business_code, '-') AS c_10 , coalesce(b.license_type, '-') AS c_11 , coalesce(c.pro_id, a.product_id) AS c_12 , coalesce(c.code, a.product_code) AS c_13 , coalesce(c.name, '-') AS c_14 , coalesce(c.pro_ver, a.product_version) AS c_15 , CASE WHEN a.api_type IN ('api_cl', 'api_yz') AND a.api_type2 IN ('STR', 'MCP') AND NOT lower(a.product_code) ~ '^(rule|score)' THEN '1' ELSE '0' END AS c_16, coalesce(b.level1) AS c_17, coalesce(b.tag1) AS c_18 , sum(a.req_cnt) AS c_19, sum(a.req_user) AS c_20 , sum(req_cnt)-sum(req_v_cnt) AS c_21, sum(a.req_v_cnt) AS c_22, sum(a.req_v_user) AS c_23 , sum(a.res_v_cnt) AS c_24, sum(a.res_v_user) AS c_25 , case when sum(req_v_user) = 0 then 0 else sum(res_v_user)/sum(req_v_user) ::float8 end AS c_26 FROM dws_fk_product_d a JOIN dim_company b ON a.api_code = b.api_code LEFT JOIN dim_merchant b1 ON a.api_code = b1.api_code AND a.api_type = b1.api_type AND b1.api_type IN ( 'api_hx', 'api_hn', 'api_zh', 'api_cl', 'api_yz', 'dz_cl', 'api_biz' ) AND ((b1.api_type = 'api_hx' AND b1.api_ver = '4') OR b1.api_type != 'api_hx') LEFT JOIN dim_product_api c ON lower(a.product_code) = c.code_lower AND a.api_type = c.api_type AND CASE WHEN a.product_version = '' THEN '1.0' ELSE a.product_version END = CASE WHEN c.pro_ver = '' THEN '1.0' ELSE c.pro_ver END WHERE a.product_code NOT IN ('score', 'loanStrategy') AND a.meal_type IN ('1') AND coalesce(c.code, a.product_code) NOT IN ('All') AND a.api_type2 NOT IN ('All') AND CASE WHEN a.api_type IN ('api_cl', 'api_yz') AND a.api_type2 IN ('STR', 'MCP') AND NOT lower(a.product_code) ~ '^(rule|score)' THEN '1' ELSE '0' END IN ('0') AND a.req_type IN ('All') AND a.statis_date >= '20170501' AND a.statis_date <= '20200511' AND coalesce(b.code_type, '1') IN ('3') AND b1.user_type IN ('1') AND coalesce(b.comp_name, '-') IN ('中国银行股份有限公司') AND coalesce(b.comp_id, '-') IN ('997') GROUP BY a.api_type, coalesce(b.comp_id, '-'), a.api_code, coalesce(b.comp_name, '-'), coalesce(b1.is_apply_loan, '-'), b1.user_type, coalesce(b.code_type, '1'), a.api_type2, coalesce(b.comp_type1_cw, '-'), coalesce(b.comp_type2_cw, '-'), coalesce(b.category_business_code, '-'), coalesce(b.license_type, '-'), coalesce(c.pro_id, a.product_id), coalesce(c.code, a.product_code), coalesce(c.name, '-'), coalesce(c.pro_ver, a.product_version), CASE WHEN a.api_type IN ('api_cl', 'api_yz') AND a.api_type2 IN ('STR', 'MCP') AND NOT lower(a.product_code) ~ '^(rule|score)' THEN '1' ELSE '0' END, coalesce(b.level1), coalesce(b.tag1) LIMIT 10 OFFSET 0;
+
+
+参考资料：
+https://gp-docs-cn.github.io/docs/ref_guide/sql_commands/ANALYZE.html
+https://yq.aliyun.com/articles/379388
+
+
+
+
+
+
 
 
 

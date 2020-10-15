@@ -261,9 +261,19 @@ the hive.metastore.warehouse.dir property in hive-site.xml is deprecated since S
 pyspark --jars /home/jinwei/tool/mysql-connector-java-5.1.43.jar
 sqlContext.sql("show databases").show()
 ```
+依赖jar包可以通过--jars或者spark-default中设定参数
+```
+We need to add few properties to spark-defaults.conf
+spark.yarn.dist.archives hdfs:///tmp/spark/libs.zip#LIBRARIES
+spark.driver.extraLibraryPath ./LIBRARIES/ # --driver-class-path 或 --conf spark.driver.extraLibraryPath=./LIBRARIES/
+spark.executor.extraLibraryPath ./LIBRARIES/ # --conf spark.driver.extraLibraryPath=./LIBRARIES/
+#LIBRARIES means that file libs.zip will be extracted to folder LIBRARIES or whatever goes after number sign #
+Lets verify the contents of executor working dir after starting spark-shell in YARN mode:
+/opt/hadoop/yarn/local/usercache/spark/appcache/application_1588831895237_0036/container_e114_1588831895237_0036_01_000002/LIBRARIES
+```
 - jdbc连接其他数据源
 ```markdown
-bin/spark-shell --driver-class-path postgresql-9.4.1207.jar --jars postgresql-9.4.1207.jar
+bin/spark-shell --driver-class-path postgresql-9.4.1207.jar --jars postgresql-9.4.1207.jar --files log4j.properties //多个jar逗号分隔
 jdbcDF = spark.read.format("jdbc").options(
   Map("url" ->  "jdbc:mysql://localhost:3306/zh_mydemo?user=root&password=admin",
   "dbtable" -> "zh_mydemo.company",
