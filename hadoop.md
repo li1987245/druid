@@ -1248,3 +1248,34 @@ hdfs dfsadmin -safemode leave
 5. Run below command on Standby namenode to get latest fsimage that we saved in above steps.
 hdfs namenode -bootstrapStandby -force
 ```
+动态修改hadoop日志级别
+```
+修改namenode日志
+hadoop daemonlog -setlevel hadoop002-security-namenode02:50070 org.apache.hadoop.hdfs.server.namenode INFO
+修改datanode日志
+hadoop daemonlog -setlevel n120p236:50075 org.apache.hadoop.hdfs.server.datanode DEBUG
+修改nodemanage日志
+hadoop daemonlog -setlevel hadoop004-security-datanode02:8041 org.apache.hadoop.hive DEBUG
+
+组件  节点  默认端口    配置  用途说明
+HDFS    DataNode    50010   dfs.datanode.address    "datanode服务端口，用于数据传输"
+HDFS    DataNode    50075   dfs.datanode.http.address   http服务的端口
+HDFS    DataNode    50475   dfs.datanode.https.address  https服务的端口
+HDFS    DataNode    50020   dfs.datanode.ipc.address    ipc服务的端口
+HDFS    NameNode    50070   dfs.namenode.http-address   http服务的端口
+HDFS    NameNode    50470   dfs.namenode.https-address  https服务的端口
+HDFS    NameNode    8020    fs.defaultFS    接收Client连接的RPC端口，用于获取文件系统metadata信息。
+HDFS    journalnode 8485    dfs.journalnode.rpc-address RPC服务
+HDFS    journalnode 8480    dfs.journalnode.http-address    HTTP服务
+HDFS    ZKFC    8019    dfs.ha.zkfc.port    ZooKeeper FailoverController，用于NN HA
+YARN    ResourceManager 8032    yarn.resourcemanager.address    RM的applications manager(ASM)端口
+YARN    ResourceManager 8030    yarn.resourcemanager.scheduler.address  scheduler组件的IPC端口
+YARN    ResourceManager 8031    yarn.resourcemanager.resource-tracker.address   IPC
+YARN    ResourceManager 8033    yarn.resourcemanager.admin.address  IPC
+YARN    ResourceManager 8088    yarn.resourcemanager.webapp.address http服务端口
+YARN    NodeManager 8040    yarn.nodemanager.localizer.address  localizer IPC
+YARN    NodeManager 8042    yarn.nodemanager.webapp.address http服务端口
+YARN    NodeManager 8041    yarn.nodemanager.address    NM中container manager的端口
+YARN    JobHistory Server   10020   mapreduce.jobhistory.address    IPC
+YARN    JobHistory Server   19888   mapreduce.jobhistory.webapp.address http服务端口
+```

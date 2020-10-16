@@ -60,6 +60,37 @@ public class Test {
 a single java.util.zip.ZipFile instance being used in multiple threads
 ZipFile非线程安全
 ```
+4. 多线程类加载死锁
+```
+多线程加载类会造成隐性死锁，jstack查看时线程显示runnable，但是会处于Object.wait()状态
+"http-nio-18909-exec-3" #34 daemon prio=5 os_prio=0 tid=0x00002b1bc99b4000 nid=0x69f0 Object.wait() [0x00002b1bd045d000]
+   java.lang.Thread.State: RUNNABLE
+正常情况：
+"http-nio-18909-exec-3" #34 daemon prio=5 os_prio=0 tid=0x00002b1bc99b4000 nid=0x69f0 runnable [0x00002b1bd045d000]
+   java.lang.Thread.State: RUNNABLE
+
+ClassLoader.loadClass()说明：
+Unless overridden, this method synchronizes on the result of <getClassLoadingLock> method during the entire class loading process.
+1.class加载到JVM中有三个步骤
+    装载：（loading）找到class对应的字节码文件。
+    连接：（linking）将对应的字节码文件读入到JVM中。
+    初始化：（initializing）对class做相应的初始化动作。
+2.Java中两种加载class到JVM中的方式
+2.1：Class.forName("className");
+    调用Class.forName(className, true, ClassLoader.getCallerClassLoader())方法
+    参数一：className，需要加载的类的名称。
+    参数二：true，是否对class进行初始化（需要initialize）
+    参数三：classLoader，对应的类加载器
+2.2：ClassLoader.laodClass(“className”);
+    调用：ClassLoader.loadClass(name, false)方法
+    参数一：name,需要加载的类的名称
+    参数二：false，这个类加载以后是否需要去连接（不需要linking）
+2.3:区别
+    forName("")得到的class是已经初始化完成的
+    loadClass("")得到的class是还没有连接的
+    一般情况下，这两个方法效果一样，都能装载Class。
+    但如果程序依赖于Class是否被初始化，就必须用Class.forName(name)
+```
 
 - mybatis
 ```
@@ -291,7 +322,23 @@ java.net.BindException: Cannot assign requested address: bind：是由于IP地�
 /etc/hosts  中配置的地址错误;
 3.还有一种情况是执行ipconfig 发现没有环路地址，这是因为环路地址配置文件丢失了;、
 ```
+- 泛型
+```
+泛型擦除
+void print(List<List<String>> list>只能传递List<List<String>>类型参数，不能传递List<ArrayList<String>>类型参数，因为java在编译时会进行擦除（erasure）操作，
+将List<List<String>>转化为List，解决方案为定义泛型参数上界，如 <T>则会被转译成普通的 Object 类型，如果指定了上限如 <T extends String>则类型参数就被替换成类型上限
 
+PECS指“Producer Extends，Consumer Super”。
+如果你是想遍历collection，并对每一项元素操作时，此时这个集合是生产者（生产元素），应该使用 Collection<? extends Thing>。
+如果你是想添加元素到collection中去，那么此时集合是消费者（消费元素）应该使用Collection<? super Thing>。
+对象实例化时不指定泛型的话，默认为：Object。
+泛型的指定中不能使用基本数据类型，可以使用包装类替换。
+静态方法中不能使用类的泛型
+可以同时绑定多个绑定,用&连接
+泛型类可能多个参数，此时应将多个参数一起放在尖括号内。比如<E1,E2,E3>
+从泛型类派生子类，泛型类型需具体化：继承泛型类后，子类类型对应类型需要具体化
+如果泛型类是一个接口或抽象类，则不可创建泛型类的对象。
+```
 #### spring
 ##### 启动
 - 默认加载类

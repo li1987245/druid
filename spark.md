@@ -357,6 +357,8 @@ words = lines.flatMap(lambda line: line.split(" ")).map(lambda word: (word,1)).r
 words.pprint()
 ssc.start()
 ssc.awaitTermination()
+
+lines.transform在driver端执行rdd.map在executor执行
 ```
 - Structured Streaming
 ```markdown
@@ -397,6 +399,15 @@ Fair调度器采用了一套基于规则的系统来确定应用应该放到哪�
 <rule name="specified" />
 <rule name="user" />
 </queuePlacementPolicy>
+7.The root scratch dir: /tmp/hive on HDFS should be writable. Current permissions are: ---------;
+D:\winutils\bin\winutils.exe chmod 777 D:\tmp\hive
+winutils.exe的安装盘下会有\tmp\hive，前提是指定了HADOOP_HOME
+8.driver端定义变量对应类未实现Serializable，使用KryoSerializer序列化且注册类，同样报错Task not serializable: java.io.NotSerializableException:
+spark.serializer默认为org.apache.spark.serializer.JavaSerializer, 可选 org.apache.spark.serializer.KryoSerializer, 实际上只要是org.apache.spark.serializer的子类就可以了,不过如果只是应用,大概你不会自己去实现一个的。
+序列化对于spark应用的性能来说,还是有很大影响的,在特定的数据格式的情况下,KryoSerializer的性能可以达到JavaSerializer的10倍以上,当然放到整个Spark程序中来考量,比重就没有那么大了,但是以Wordcount为例，通常也很容易达到30%以上的性能提升。而对于一些Int之类的基本类型数据，性能的提升就几乎可以忽略了。KryoSerializer依赖Twitter的Chill库来实现，相对于JavaSerializer，主要的问题在于不是所有的Java Serializable对象都能支持。
+需要注意的是，这里可配的Serializer针对的对象是Shuffle数据，以及RDD Cache等场合，而Spark Task的序列化是通过spark.closure.serializer来配置，但是目前只支持JavaSerializer，所以等于没法配置啦。
+9.broadcast NullPointerException
+broadcast需要在driver端实例化在executor通过broadcast.value使用，即需要显示传递给executor
 ```
 -
 ```java引用scala类提示，程序包com.br.rule.broadcast不存在

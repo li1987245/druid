@@ -240,6 +240,7 @@ show binary logs; //查看binlog文件列表
 show engine innodb status
 查看binlog
 1./opt/mysql-5.5.30_3306/bin/mysqlbinlog --base64-output=decode-rows -v binlog.000966|less
+/opt/mysql-5.5.30_3306/bin/mysqlbinlog --base64-output=decode-rows -v --start-datetime='2020-08-07 23:00:00' --stop-datetime='2020-08-07 23:04:59' --database=data_govern  /opt/mysql-5.5.30_3306/data/binlog.002682 |less
 mysqlbinlog: /usr/bin/mysqlbinlog  mysql-bin.000007
     - mysqlbinlog是mysql官方提供的一个binlog查看工具，
     - 也可使用–read-from-remote-server从远程服务器读取二进制日志，
@@ -274,7 +275,34 @@ Seconds_Behind_Master: 0
 3、如果Relay_Master_Log_File 和 Master_Log_File 不一样，那说明延迟可能较大，需要从MASTER上取得binlog status，判断当前的binlog和MASTER上的差距；
 4、如果以上都不能发现问题，可使用pt_heartbeat工具来监控主备复制的延迟。
 ```
-
+- 查看表空间大小
+```
+select concat(round(sum(data_length/1024/1024),2),'MB') as data from information_schema.tables where table_schema='DB_Name';
+select concat(round(sum(data_length/1024/1024),2),'MB') as data from information_schema.tables where table_schema='data_govern' and table_name='dgs_job';
+```
+- 导入文件
+```
+1.Usage: mysqlimport [OPTIONS] database textfile ...
+--fields-terminated-by=字符串：设置字符串为字段之间的分隔符，可以为单个或多个字符。默认值为制表符“\t”。
+-L, --local：表示从客户端任意路径读取文件导入表中，未设置该选项时，默认只从datadir下同名数据库目录下读取文件导入
+--ignore-lines=n：表示可以忽略前n行。
+-l, --lock-tables：写入时锁定所有表
+-p, --password[=name]：指定用户密码
+-u, --user=name：指定登入MySQL用户名
+-h, --host=name：指定远程连接的服务器
+-c, --columns=name：往表里导入指定字段，如：--columns='Name,Age,Gender'
+-C, --compress：在客户端和服务器之间启用压缩传递所有信息
+指定--local选项，可以从本机任意路径导入数据
+mysqlimport -h host  -u username -p password  dbname --fields-terminated-by=',' '/root/test/student.txt' --columns='name,age' --local -d
+2.LOAD DATA INFILE 'xxx' INTO TABLE xxx FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' LINES TERMINATED BY '\n';
+3.source xxx.sql 或 mysql -uxxx -pxxx < xxx.sql
+```
+- 导出文件
+```
+1.select xxx from xxx INTO OUTFILE 'xxx.csv' CHARACTER SET utf8 FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '"' LINES TERMINATED BY '\n';
+mysql -e "set names utf8;select * from xxx" |sed -e  "s/\t/,/g" -e "s/NULL/  /g" -e "s/\n/\r\n/g" > xxx.csv
+2.mysqldump -u 用户名 -p 数据库名 表名> 导出的文件名
+````
 #### benchmark
 - 安装
 ```

@@ -1,3 +1,8 @@
+- 初始化mysql
+```
+使用hive的schematool初始化
+schematool -dbType mysql -initSchema
+```
 - hive-site.xml
 ```
 <property>
@@ -378,6 +383,18 @@ CLUSTER BY col_list|[DISTRIBUTE BY col_list]
 set hive.map.aggr=true|hive.groupby.mapaggr.checkinterval=100000 设置map端聚合
 set hive.groupby.skewindata=true 防止数据倾斜
 
+set hive.vectorized.execution.enabled = true;
+set  hive.auto.convert.join=true; //自动识别mapjoin
+set hive.mapjoin.smalltable.filesize=2500000; //小于设定值时使用mapjoin
+set hive.hadoop.supports.splittable.combineinputformat=true;
+set hive.merge.smallfiles.avgsize=256000000;
+set mapred.max.split.size=4096000000;
+set mapred.min.split.size.per.node=4096000000;
+set mapred.min.split.size.per.rack=4096000000;
+set hive.merge.mapfiles = true;
+set hive.merge.mapredfiles = true;
+set hive.merge.size.per.task = 256000000;
+
 set hive.cli.print.header=true; //设置显示列名
 set hive.resultset.use.unique.column.names=false; //设置显示列名 不显示表名
 
@@ -481,13 +498,42 @@ parse_url(‘http://facebook.com/path/p1.php?query=1‘, ‘QUERY’)返回’qu
 
 # substr
 ````
--
+8. 窗口函数
+```
+窗口函数 over(分组 排序 窗口)
+(ROWS | RANGE) BETWEEN (UNBOUNDED | [num]) PRECEDING AND ([num] PRECEDING | CURRENT ROW | (UNBOUNDED | [num]) FOLLOWING)
+(ROWS | RANGE) BETWEEN CURRENT ROW AND (CURRENT ROW | (UNBOUNDED | [num]) FOLLOWING)
+(ROWS | RANGE) BETWEEN [num] FOLLOWING AND (UNBOUNDED | [num]) FOLLOWING
+当ORDER BY后面缺少窗口从句条件，窗口规范默认是 RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW.
+当ORDER BY和窗口从句都缺失, 窗口规范默认是 ROW BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING.
+ROWS 选择前后几行，例如 ROWS BETWEEN 3 PRECEDING AND 3 FOLLOWING 表示往前 3 行到往后 3 行，一共 7 行数据（或小于 7 行，如果碰到了边界）
+RANGE 选择数据范围，例如 RANGE BETWEEN 3 PRECEDING AND 3 FOLLOWING 表示所有值在 $[c-3,c+3]$ 这个范围内的行，$c$ 为当前行的值
+
+sum(col) over() :  分组对col累计求和
+count(col) over() : 分组对col累计
+min(col) over() : 分组对col求最小
+max(col) over() : 分组求col的最大值
+avg(col) over() : 分组求col列的平均值
+first_value(col) over() : 某分区排序后的第一个col值
+last_value(col) over() : 某分区排序后的最后一个col值
+lag(col,n,DEFAULT) over() : 统计往前n行的col值，n可选，默认为1，DEFAULT当往上第n行为NULL时候，取默认值，如不指定，则为NULL
+lead(col,n,DEFAULT)  over(): 统计往后n行的col值，n可选，默认为1，DEFAULT当往下第n行为NULL时候，取默认值，如不指定，则为NULL
+ntile(n) over() : 用于将分组数据按照顺序切分成n片，返回当前切片值。注意：n必须为int类型。
+排名函数：
+row_number() over() : 排名函数，不会重复，适合于生成主键或者不并列排名
+rank() over() :  排名函数，有并列名次，名次不连续。如:1,1,3
+dense_rank() over() : 排名函数，有并列名次，名次连续。如：1，1，2
+```
 9. 配置
 ```
 参考 org.apache.hadoop.hive.conf.HiveConf
 hive.exec.orc.split.strategy 参数控制在读取ORC表时生成split的策略。BI策略以文件为粒度进行split划分；ETL策略会将文件进行切分，多个stripe组成一个split；HYBRID策略为：当文件的平均大小大于hadoop最大split值（默认256 * 1024 * 1024）时使用ETL策略，否则使用BI策略。
 对于一些较大的ORC表，可能其footer较大，ETL策略可能会导致其从hdfs拉取大量的数据来切分split，甚至会导致driver端OOM，因此这类表的读取建议使用BI策略。
 对于一些较小的尤其有数据倾斜的表（这里的数据倾斜指大量stripe存储于少数文件中），建议使用ETL策略
+设置hive日志级别
+hive --hiveconf hive.root.logger=DEBUG,console
+hive设置mr日志级别
+set mapreduce.map.log.level=DEBUG;
 ```
 
 10. 查看orc文件
