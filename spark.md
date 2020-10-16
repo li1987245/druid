@@ -408,6 +408,8 @@ spark.serializer默认为org.apache.spark.serializer.JavaSerializer, 可选 org.
 需要注意的是，这里可配的Serializer针对的对象是Shuffle数据，以及RDD Cache等场合，而Spark Task的序列化是通过spark.closure.serializer来配置，但是目前只支持JavaSerializer，所以等于没法配置啦。
 9.broadcast NullPointerException
 broadcast需要在driver端实例化在executor通过broadcast.value使用，即需要显示传递给executor
+10. Caused by: java.lang.IllegalArgumentException: Wrong FS: hdfs://brcluster/user/loan/batch_process_result/.hive-staging_hive_2020-10-15_20-28-46_793_8703393745638456305-1/-ext-10000/part-00000-1b24b5af-4db9-4d76-8342-ffe329cd985b-c000, expected: hdfs://m20p13
+Hadoop配置文件core-site.xml中的fs.defaultFS 和hive配置文件hive-sit.xml中的hive.metastore.warehouse.dir和spark配置中的spark.sql.warehouse.dir不一致导致
 ```
 -
 ```java引用scala类提示，程序包com.br.rule.broadcast不存在

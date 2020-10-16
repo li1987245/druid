@@ -256,6 +256,7 @@ bin/kafka-topics.sh --describe --zookeeper guest03:2181,guest01:2181,guest02:218
 bin/kafka-console-producer.sh --broker-list guest06:6667,guest07:6667,guest08:6667 --topic test --property compression.type=lz4
 #Start a consumer
 bin/kafka-console-consumer.sh --zookeeper guest03:2181,guest01:2181,guest02:2181 --topic test --from-beginning
+bin/kafka-console-consumer.sh --bootstrap-server 192.168.162.134:6667,192.168.162.135:6667,192.168.162.136:6667 --topic test --from-beginning
 #Modifying topics
 bin/kafka-topics.sh --zookeeper zk_host:port/chroot --alter --topic my_topic_name
        --partitions 40
