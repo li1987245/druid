@@ -469,3 +469,9 @@ topic和分区数量
 5.2.3 Request_Rate_Upper_Limit
 5.2.4 平均延迟计算公式
 ```
+
+- Pulsar与Kafka消费模型对比
+```
+kafka为stream消费模型，pulsar Exclusive 和 Failover 属于 Stream 的消费模型，Share 属于 Queue 的消费模型
+https://cloud.tencent.com/developer/article/1448729
+```

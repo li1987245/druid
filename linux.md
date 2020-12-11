@@ -79,8 +79,22 @@ r（读）w（写）x（可执行） 4+2+1
 0700 表示只对当前用户当前用户组授权
 ```
 
+- sh bash 区别
+```
+/bin/sh 在centos上为/bin/bash的软链接，等同于 bash --posix
+在其他操作系统上则可能为其他shell实现
+```
+- source
+```
+source filename [arguments]
+filename里面不包括/，那么source会从PATH路径里搜索文件，当bash不在posix模式才会搜索当前目录
+Read and execute commands from filename in the current shell environment and return the exit status of the last command exe-cuted from filename. If filename does not contain a slash, file names in PATH are used to find the directory containing file-name. The file searched for in PATH need not be executable. When bash is not in posix mode, the current directory is searched if no file is found in PATH. If the source path option to the shopt builtin command is turned off, the PATH is not searched. If any arguments are supplied, they become the positional parameters when filename is executed. Otherwise the positional parameters are unchanged. The return status is the status of the last command exited within the script (0 if no commands are executed), and false if filename is not found or cannot be read.
+```
+
 - 常用命令
 ```
 列出包含指定内容的文件
 grep -r -l 'sqoop_dcp_loss' ./
+#修改用户的附加组
+usermod -G 附加组名 用户名
 ```

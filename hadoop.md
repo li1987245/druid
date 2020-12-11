@@ -966,6 +966,8 @@ source /etc/profile
          hadoop namenode -format  //namenode端执行
          
          hdfs namenode -bootstrapStandby //secend namenode端执行 执行前需保证namenode已经启动
+
+         hdfs getconf -confKey dfs.blocksize //查看配置
     
     
     10.常见异常

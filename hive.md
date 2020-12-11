@@ -384,9 +384,15 @@ set hive.map.aggr=true|hive.groupby.mapaggr.checkinterval=100000 设置map端聚
 set hive.groupby.skewindata=true 防止数据倾斜
 
 set hive.vectorized.execution.enabled = true;
+set hive.exec.submit.local.task.via.child=false; //设置是否为本地task map启动子进程
+set hive.exec.parallel=true;
+set hive.exec.parallel.thread.number=8; //设置mr并行度
 set  hive.auto.convert.join=true; //自动识别mapjoin
 set hive.mapjoin.smalltable.filesize=2500000; //小于设定值时使用mapjoin
 set hive.hadoop.supports.splittable.combineinputformat=true;
+set hive.map.aggr=true; //聚合优化
+set hive.groupby.mapaggr.checkinterval = 100000; //Map端进行聚合操作的条目数目
+set hive.groupby.skewindata=true; //数据倾斜的时候进行负载均衡
 set hive.merge.smallfiles.avgsize=256000000;
 set mapred.max.split.size=4096000000;
 set mapred.min.split.size.per.node=4096000000;
@@ -394,6 +400,36 @@ set mapred.min.split.size.per.rack=4096000000;
 set hive.merge.mapfiles = true;
 set hive.merge.mapredfiles = true;
 set hive.merge.size.per.task = 256000000;
+set hive.merge.smallfiles.avgsize=256000000;
+set hive.exec.reducers.bytes.per.reducer=4096000000;
+set mapreduce.job.jvm.numtasks=8;
+set mapreduce.job.queuename=root.data;
+
+set hive.exec.mode.local.auto=true; //本地模式在单台机器上处理所有的任务
+set hive.exec.mode.local.auto.inputbytes.max=134217728;
+set hive.exec.mode.local.auto.input.files.max=4;
+set mapred.map.tasks.speculative.execution=true; //hadoop mapreduce控制推测执行的参数
+set mapred.reduce.tasks.speculative.execution=true;
+set hive.mapred.reduce.tasks.speculative.execution=true; //hive本身控制推测执行的参数
+
+set hive.fetch.task.conversion=more; //该属性修改为more以后，在全局查找、字段查找、limit查找等都不走mapreduce,none为走mr
+
+set hive.limit.optimize.enable=true; //将针对查询对元数据进行抽样
+set hive.limit.row.max.size=100000;
+set hive.limit.optimize.limit.file=10;
+
+set hive.exec.dynamic.partition=true;
+set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.exec.max.dynamic.partitions.pernode=10000;
+set hive.exec.max.dynamic.partitions=100000;
+set hive.exec.max.created.files=1000000;
+
+1.map数的公式
+set mapreduce.input.fileinputformat.split.maxsize=1024;
+splitsize = max(splitsize,min(blocksize,filesize/NUMmaps)) NUMmaps即为默认的map数，默认为1
+2.reducer数的公式
+N=min(hive.exec.reducers.max,总输入数据量/hive.exec.reducers.bytes.per.reducer)
+或 set mapreduce.job.reduces = 15;
 
 set hive.cli.print.header=true; //设置显示列名
 set hive.resultset.use.unique.column.names=false; //设置显示列名 不显示表名
@@ -623,4 +659,11 @@ set hive.merge.mapfiles = true #在Map-only的任务结束时合并小文件
 set hive.merge.mapredfiles = true #在Map-Reduce的任务结束时合并小文件
 set hive.merge.size.per.task = 256*1000*1000 #合并文件的大小
 set hive.merge.smallfiles.avgsize=16000000 #当输出文件的平均大小小于该值时，启动一个独立的map-reduce任务进行文件merge。
+```
+
+- 问题
+```
+1、Halting due to Out Of Memory Error...
+内存溢出
+map出现GC overhead limit exceeded，JVM花费了98%的时间进行垃圾回收，而只得到2%可用的内存，频繁的进行内存回收(最起码已经进行了5次连续的垃圾回收)，JVM就会曝出java.lang.OutOfMemoryError: GC overhead limit exceeded错误
 ```

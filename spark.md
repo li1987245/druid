@@ -30,12 +30,14 @@ vim conf/spark-default.conf
 spark.eventLog.enabled=true
 spark.eventLog.compress=true
 spark.eventLog.dir=hdfs://master:9000/tmp/logs/spark
-spark.history.fs.logDirectory=hdfs://master:9000/tmp/logs/spark
-spark.yarn.historyServer.address=master:18080
-spark.history.ui.port=18080
 spark.yarn.jars=hdfs:///tmp/spark/lib_jars/*.jar
 spark.executor.memory=512m
 spark.serializer=org.apache.spark.serializer.KryoSerializer
+```
+vim spark-env.sh
+```
+#以spark.history开头的需要配置在spark-env.sh中的SPARK_HISTORY_OPTS，以spark.eventLog开头的配置在spark-defaults.conf
+SPARK_HISTORY_OPTS="-Dspark.history.fs.logDirectory=hdfs://master:9000/tmp/logs/spark -Dspark.history.ui.port=18080 -Dspark.history.fs.cleaner.enabled=true"
 ```
 - External Shuffle Service
 ```
@@ -119,10 +121,27 @@ sbin/start-thriftserver.sh --master yarn \
 ```
 bin/beeline -u jdbc:hive2://master:10000 -n root
 ```
-- 启动日志
+- 启动history server
 ```
 sbin/start-history-server.sh
 sbin/stop-history-server.sh
+
+spark.history.fs.update.interval 默认值10秒
+这个参数指定刷新日志的时间，更短的时间可以更快检测到新的任务以及任务执行情况，但过快会加重服务器负载
+spark.history.ui.maxApplication 默认值intMaxValue
+这个参数指定UI上最多显示的作业的数目
+spark.history.ui.port 默认值18080
+这个参数指定history-server的网页UI端口号
+spark.history.fs.cleaner.enabled 默认为false
+这个参数指定history-server的日志是否定时清除，true为定时清除，false为不清除。这个值一定设置成true啊，不然日志文件会越来越大。
+spark.history.fs.cleaner.interval 默认值为1d
+这个参数指定history-server的日志检查间隔，默认每一天会检查一下日志文件
+spark.history.fs.cleaner.maxAge 默认值为7d
+这个参数指定history-server日志生命周期，当检查到某个日志文件的生命周期为7d时，则会删除该日志文件
+spark.eventLog.compress 默认值为false
+这个参数设置history-server产生的日志文件是否使用压缩，true为使用，false为不使用。这个参数务可以成压缩哦，不然日志文件岁时间积累会过大
+spark.history.retainedApplications 　默认值：50
+在内存中保存Application历史记录的个数，如果超过这个值，旧的应用程序信息将被删除，当再次访问已被删除的应用信息时需要重新构建页面。
 ```
 - 运行
 ```
@@ -410,6 +429,8 @@ spark.serializer默认为org.apache.spark.serializer.JavaSerializer, 可选 org.
 broadcast需要在driver端实例化在executor通过broadcast.value使用，即需要显示传递给executor
 10. Caused by: java.lang.IllegalArgumentException: Wrong FS: hdfs://brcluster/user/loan/batch_process_result/.hive-staging_hive_2020-10-15_20-28-46_793_8703393745638456305-1/-ext-10000/part-00000-1b24b5af-4db9-4d76-8342-ffe329cd985b-c000, expected: hdfs://m20p13
 Hadoop配置文件core-site.xml中的fs.defaultFS 和hive配置文件hive-sit.xml中的hive.metastore.warehouse.dir和spark配置中的spark.sql.warehouse.dir不一致导致
+11. java.lang.NoSuchMethodError: org.json4s.JsonDSL$.seq2jvalue(Lscala/collection/Traversable;Lscala/Function1;)Lorg/json4s/JsonAST$JArray
+spark2.4.6使用json4j 3.5.3
 ```
 -
 ```java引用scala类提示，程序包com.br.rule.broadcast不存在
