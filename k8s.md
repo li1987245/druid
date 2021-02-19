@@ -84,6 +84,13 @@ kubectl scale rc rc-nginx-3 —replicas=4 #调整实例数量
 kubectl autoscale rc rc-nginx-3 —min=1 —max=4 #动态调整实例数量
 kubectl attach kube-dns-v9-rcfuk -c skydns —namespace=kube-system #直接查看容器中以daemon形式运行的进程的输出，有多个容器，需要使用-c选项指定容器
 kubectl exec -it jdk bash #类似于docker的exec命令，有多个容器，需要使用-c选项指定容器
+kubectl explain Deployment.spec #查看帮助手册
+kubectl api-resources #列出可用的 API 资源 或 kubectl explain
+kubectl api-versions #列出可用的 API 版本
+创建 ResourceQuota
+kubectl apply -f https://k8s.io/examples/admin/resource/quota-mem-cpu.yaml --namespace=quota-mem-cpu-example
+查看 ResourceQuota 详情：
+kubectl get resourcequota mem-cpu-demo --namespace=quota-mem-cpu-example --output=yaml
 
 kubectl expose deployment nginx-deploy  --name=nginx   --port=80 --target-port=80 --type=NodePort #暴露服务
 kubectl get svc --all-namespaces

@@ -63,6 +63,20 @@ pip uninstall jupyter_nbextensions_configurator
 3.jupyter kernelspec list
 4.jupyter kernelspec remove kernel名称
 ```
+### python
+```markdown
+print '***获取当前目录***'
+print os.getcwd()
+print os.path.abspath(os.path.dirname(__file__))
+print Path(__file__).parent.resolve() # path对象 使用str(path)转成字符串
+print '***获取上级目录***'
+print os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+print os.path.abspath(os.path.dirname(os.getcwd()))
+print os.path.abspath(os.path.join(os.getcwd(), ".."))
+
+print '***获取上上级目录***'
+print os.path.abspath(os.path.join(os.getcwd(), "../.."))
+```
 
 ### numpy
 
