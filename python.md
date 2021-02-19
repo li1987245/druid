@@ -18,6 +18,7 @@ conda config --set show_channel_urls yes
 conda create -n tensorflow python=3.5
 activate tensorflow
 pip install --ignore-installed --upgrade https://storage.googleapis.com/tensorflow/windows/cpu/tensorflow-0.12.0-cp35-cp35m-win_amd64.whl
+
 //linux
 conda create -n pyspark python=3.6 ipython pyspark jupyter
 conda activate pyspark
@@ -112,7 +113,81 @@ pip uninstall jupyter_nbextensions_configurator
   ```markdown
   基于概率模型:高斯混合模型（GMM，Gaussian Mixture Models）。基于神经网络模型的方法:SOM（Self Organized Maps）
   ```
+- conda && pip
+```
+conda update -n base conda        #update最新版本的conda
+conda create -n xxxx python=3.5   #创建python3.5的xxxx虚拟环境
+conda activate xxxx               #开启xxxx环境
+conda deactivate                  #关闭环境
+conda env list                    #显示所有的虚拟环境
+conda info --envs                 #显示所有的虚拟环境
+anaconda search -t conda tensorflow #查看tensorflow各个版本
+anaconda show <USER/PACKAGE> #查看指定包可安装版本信息命令
+anaconda show tensorflow #查看指定anaconda/tensorflow版本信息
+conda list         #查看已经安装的文件包
+conda list  -n xxx       #指定查看xxx虚拟环境下安装的package
+conda update xxx   #更新xxx文件包
+conda uninstall xxx   #卸载xxx文件包
+conda remove -n xxxx --all   #删除xxxx虚拟环境
+conda clean -p      #删除没有用的包
+conda clean -t      #删除tar包
+conda clean -y --all #删除所有的安装包及cache
+conda create --name newname --clone oldname  #克隆oldname环境为newname环境
+conda remove --name oldname --all #彻底删除旧环境
+conda activate   #默认激活base环境
+conda activate xxx  #激活xxx环境
+conda deactivate #关闭当前环境
+conda config --set auto_activate_base false  #关闭自动激活状态
+conda config --set auto_activate_base true  #关闭自动激活状态
+#conda 安装本地包
+conda install --use-local  ~/Downloads/a.tar.bz2
+#显示目前conda的数据源有哪些
+conda config --show channels
+#添加数据源：例如, 添加清华anaconda镜像：
+conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
+conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
+conda config --set show_channel_urls yes
+#删除数据源
+conda config --remove channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
+conda list -e > requirements.txt #conda批量导出包含环境中所有组件的requirements.txt文件
+conda install --yes --file requirements.txt #conda批量安装requirements.txt
+#显示目前pip的数据源有哪些
+pip config list
+pip config list --[user|global] # 列出用户|全局的设置
+pip config get global.index-url # 得到这key对应的value 如：https://mirrors.aliyun.com/pypi/simple/
 
+# 添加
+pip config set key value
+#添加数据源：例如, 添加USTC中科大的源：
+pip config set global.index-url https://mirrors.ustc.edu.cn/pypi/web/simple
+#添加全局使用该数据源
+pip config set global.trusted-host https://mirrors.ustc.edu.cn/pypi/web/simple
+# 删除
+pip config unset key
+# 例如
+conda config --remove channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
+#搜索
+pip search flask  #搜素flask安装包
+#pip 安装本地包
+pip install   ～/Downloads/a.whl
+# 升级pip
+pip install pip -U
+阿里云                    http://mirrors.aliyun.com/pypi/simple/
+中国科技大学         https://pypi.mirrors.ustc.edu.cn/simple/
+豆瓣(douban)         http://pypi.douban.com/simple/
+清华大学                https://pypi.tuna.tsinghua.edu.cn/simple/
+中国科学技术大学  http://pypi.mirrors.ustc.edu.cn/simple/
+pip list #列出当前缓存的包
+pip purge #清除缓存
+pip remove #删除对应的缓存
+pip help #帮助
+pip install xxx #安装xxx包
+pip uninstall xxx #删除xxx包
+pip show xxx #展示指定的已安装的xxx包
+pip check xxx #检查xxx包的依赖是否合适
+pip freeze > requirements.txt
+pip install -r requirements.txt
+```
 
 #### FAQ
 1. pip is configured with locations that require TLS/SSL, however the ssl module in Python is not available.
@@ -132,3 +207,5 @@ anaconda search -t conda celery
 anaconda show Winand/celery
 conda install --channel https://conda.anaconda.org/Winand celery
 ```
+
+

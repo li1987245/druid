@@ -98,3 +98,58 @@ grep -r -l 'sqoop_dcp_loss' ./
 #修改用户的附加组
 usermod -G 附加组名 用户名
 ```
+
+- network
+```
+/etc/sysconfig/network-scripts/ifcfg-eth0
+# 使用ifconfig
+ifconfig eth0 192.168.1.3 netmask 255.255.255.0
+# 使用用ip命令增加一个IP
+ip addr add 192.168.1.4/24 dev eth0
+# 使用ifconfig增加网卡别名
+ifconfig eth0:0 192.168.1.10
+# 使用route命令
+route -n  #查看路由
+route add default gw 192.168.1.1
+# 也可以使用ip命令
+ip route add default via 192.168.1.1
+# 安装并加载内核模块
+apt-get install vlan
+modprobe 8021q
+# 添加vlan
+vconfig add eth0 100
+ifconfig eth0.100 192.168.100.2 netmask 255.255.255.0
+# 删除vlan
+vconfig rem eth0.100
+
+宿主机无法访问外网
+route -n
+#关闭网桥
+ifconfig docker0 down
+#删除网桥
+brctl delbr docker0
+```
+- linux rm 设备或资源忙
+```
+查看资源占用进程 lsof +d /local/ 显示目录占用的进程
+df -h 或查看挂载情况
+关闭应用或者kill  进程
+```
+- docker overlay和shm无法删除，设备或资源忙
+```
+cat /proc/mounts |grep "docker"
+umount /opt/docker/overlay2/03784e282684fb4947e4732e990a7b6615d320e5f6a60b3fa933e620f29cc153/merged
+```
+- 火焰图
+```
+sudo apt install linux-tools-common linux-tools-4.15.0-135-generic -y
+git clone https://github.com/brendangregg/FlameGraph
+sudo perf record -F 99 -p 2968 -g -- sleep 30 #perf record 表示采集系统事件, 没有使用 -e 指定采集事件, 则默认采集 cycles(即 CPU clock 周期), -F 99 表示每秒 99 次,
+                                                -p 13204 是进程号, 即对哪个进程进行分析, -g 表示记录调用栈, sleep 30 则是持续 30 秒. 在当前路径生成perf.data文件
+sudo perf report -n --stdio
+sudo perf script | FlameGraph/stackcollapse-perf.pl| FlameGraph/flamegraph.pl > process.svg # 生成火焰图
+分析java
+sudo perf record -F 99 -a -- sleep 30; ./jmaps #jmaps脚本的作用是获取java程序运行时的符号表,该脚本依赖git项目 https://github.com/jvm-profiling-tools/perf-map-agent，打开jmaps文件，可以看到如下代码：
+                                                AGENT_HOME=${AGENT_HOME:-/usr/lib/jvm/perf-map-agent} # from https://github.com/jvm-profiling-tools/perf-map-agent，需要手动将AGENT_HOME替换为刚才编译后的per-map-agent/out/目录。
+sudo perf script | FlameGraph/stackcollapse-perf.pl | grep java | FlameGraph/flamegraph.pl > process.svg # 生成火焰图
+```
