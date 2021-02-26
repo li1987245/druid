@@ -30,6 +30,17 @@ b)vim /home/spark/.jupyter/jupyter_notebook_config.py,去掉注释，修改为�
     c.NotebookApp.ip = '127.0.0.1'
     c.NotebookApp.port = 8888
     c.NotebookApp.open_browser = True
+- 打包wheel安装包
+```
+# 源码打包成wheel文件
+python3 setup.py bdist_wheel
+# 安装wheel文件
+python3 -m pip install -i http://pypi.douban.com/simple --trusted-host pypi.douban.com  dist/*.whl
+# 把requirement.txt中依赖python包也打包成wheel文件
+python3 -m pip wheel -i http://pypi.douban.com/simple --trusted-host pypi.douban.com  --wheel-dir wheelhouse dist/*.whl
+# 安装所有wheel文件
+python3 -m pip install --no-cache --ignore-installed -i http://pypi.douban.com/simple --trusted-host pypi.douban.com wheelhouse/*
+```
 
 - 打包可执行zip
 ```
@@ -136,6 +147,7 @@ conda deactivate                  #关闭环境
 conda env list                    #显示所有的虚拟环境
 conda info --envs                 #显示所有的虚拟环境
 anaconda search -t conda tensorflow #查看tensorflow各个版本
+conda search -c conda-forge nodejs #查看conda-forge上nodejs版本
 anaconda show <USER/PACKAGE> #查看指定包可安装版本信息命令
 anaconda show tensorflow #查看指定anaconda/tensorflow版本信息
 conda list         #查看已经安装的文件包
@@ -165,10 +177,20 @@ conda config --set show_channel_urls yes
 conda config --remove channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
 conda list -e > requirements.txt #conda批量导出包含环境中所有组件的requirements.txt文件
 conda install --yes --file requirements.txt #conda批量安装requirements.txt
+
+conda install nodejs -c conda-forge --repodata-fn=repodata.json #安装nodejs最新版本
+# 升级pip
+python -m pip install --upgrade pip
 #显示目前pip的数据源有哪些
 pip config list
 pip config list --[user|global] # 列出用户|全局的设置
 pip config get global.index-url # 得到这key对应的value 如：https://mirrors.aliyun.com/pypi/simple/
+
+conda config --set ssl_verify False
+npm config set registry https://registry.company.com/
+yarn config set registry https://registry.company.com/
+# Configure npm to not use SSL
+npm set strict-ssl False
 
 # 添加
 pip config set key value
