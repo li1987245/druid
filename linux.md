@@ -135,6 +135,10 @@ brctl delbr docker0
 df -h 或查看挂载情况
 关闭应用或者kill  进程
 ```
+- nfs 挂载
+```
+mount -t nfs m163p113:/nfs/kwtest /home/jovyan/kwtest
+```
 - docker overlay和shm无法删除，设备或资源忙
 ```
 cat /proc/mounts |grep "docker"
@@ -153,3 +157,13 @@ sudo perf record -F 99 -a -- sleep 30; ./jmaps #jmaps脚本的作用是获取jav
                                                 AGENT_HOME=${AGENT_HOME:-/usr/lib/jvm/perf-map-agent} # from https://github.com/jvm-profiling-tools/perf-map-agent，需要手动将AGENT_HOME替换为刚才编译后的per-map-agent/out/目录。
 sudo perf script | FlameGraph/stackcollapse-perf.pl | grep java | FlameGraph/flamegraph.pl > process.svg # 生成火焰图
 ```
+- 提高监听的文件数量
+```
+cat /proc/sys/fs/inotify/max_user_watches
+sudo vim /etc/sysctl.conf
+# 在最后一行添加:
+fs.inotify.max_user_watches = 524288
+sudo sysctl -p --system
+```
+
+#### FAQ

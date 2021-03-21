@@ -228,6 +228,140 @@ There are five different ways you can express the chart you want to install:
 5. By chart reference and repo url: helm install --repo https://example.com/charts/ mynginx nginx
 ```
 
+#### docker
+卸载已安装版本
+```
+sudo yum remove docker \
+                  docker-client \
+                  docker-client-latest \
+                  docker-common \
+                  docker-latest \
+                  docker-latest-logrotate \
+                  docker-logrotate \
+                  docker-engine
+```
+安装依赖
+```
+sudo yum install -y yum-utils \
+  device-mapper-persistent-data \
+  lvm2
+```
+安装yum国内源
+```
+sudo yum-config-manager \
+    --add-repo \
+    http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
+sudo yum-config-manager \
+    --add-repo \
+    https://mirrors.tuna.tsinghua.edu.cn/docker-ce/linux/centos/docker-ce.repo
+```
+安装 Docker Engine-Community
+```
+sudo yum install docker-ce docker-ce-cli containerd.io
+```
+启动 Docker
+```
+sudo systemctl start docker
+docker -v
+```
+安装docker hub
+```
+# cat /etc/redhat-release
+CentOS Linux release 7.3.1611 (Core)
+# uname -r
+3.10.0-514.2.2.el7.x86_64
+# docker -v
+Docker version 20.10.3, build 48d30b5
+获取官方registry镜像
+docker pull registry
+查看docker信息
+# docker images
+REPOSITORY   TAG       IMAGE ID       CREATED        SIZE
+registry     latest    678dfa38fcfa   2 months ago   26.2MB
+docker inspect 678dfa38fcfa ，默认仓库会被创建在容器的/var/lib/registry目录下，我们需要用-v参数将镜像文件存放在本地指定路径。
+运行registry镜像
+docker run -d -p 5000:5000 --name="docker-registry" --restart=always -v /opt/dockerhub:/var/lib/registry registry  ##运行registry容器，端口为5000；并将上传镜像存放到本地的/opt/dockerhub目录
+docker ps -a  ##查看运行的容器
+curl 127.0.0.1:5000/v2/_catalog
+
+修改docker配置/etc/docker/daemon.json，重启docker：systemctl restart docker
+{
+    "exec-opts": ["native.cgroupdriver=systemd"],
+    "log-driver": "json-file",
+    "log-opts": {
+    "max-size": "100m"
+    },
+    "storage-driver": "overlay2",
+    "storage-opts": [
+        "overlay2.override_kernel_check=true"
+    ],
+    "registry-mirrors":[
+        "http://hub-mirror.c.163.com",
+        "https://docker.mirrors.ustc.edu.cn",
+        "https://registry.docker-cn.com"
+    ],
+    "insecure-registries": ["registry-pre.100credit.cn","registry.100credit.cn","192.168.163.114:5000"],
+    "data-root": "/opt/docker" # 默认路径/var/lib/docker/image/overlay2
+}
+insecure-registries为设置registry 为http访问，否则会报Error response from daemon: Get https://192.168.163.114:5000/v2/: http: server gave HTTP response to HTTPS client
+
+设置账号密码启动，使用2.7.0版本，最新版本报错docker: Error response from daemon: OCI runtime create failed: container_linux.go:370: starting container process caused: exec: "htpasswd": executable file not found in $PATH: unknown.
+docker run --entrypoint htpasswd registry:2.7.0 -Bbn jack 123456 > $(pwd)/registry/auth/htpasswd
+docker run -d -p 5000:5000 --restart=always --name registry \
+    -v `pwd`/registry/config/:/etc/docker/registry/ \
+    -v `pwd`/registry/auth:/auth/ \
+    -e "REGISTRY_AUTH=htpasswd" \
+    -e "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm" \
+    -e REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd \
+    -v /opt/dockerhub:/var/lib/registry \
+    registry:2.7.0
+登录测试
+docker login 192.168.163.114:5000
+Username: jack
+Password:
+WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
+Configure a credential helper to remove this warning. See
+https://docs.docker.com/engine/reference/commandline/login/#credentials-store
+
+Login Succeeded
+
+```
+
+发布镜像
+```
+要上传镜像到私有仓库，需要在镜像的 tag 上加入仓库地址,也可以加入命名空间，另外最好给镜像打上 tag：
+docker tag model/singleuser:3.1 192.168.163.114:5000/model/singleuser:3.1
+docker push 192.168.163.114:5000/model/singleuser:3.1
+docker pull 127.0.0.1:5000/model/singleuser:3.1
+修改docker配置/etc/docker/daemon.json，重启docker：systemctl restart docker
+{
+  "registry-mirror": [
+    "https://registry.docker-cn.com"
+  ],
+  "insecure-registries": [
+    "[私有仓库 ip:port]"
+  ]
+}
+推送失败可以docker logs -f docker-registry查看日志
+```
+基于现有镜像修改发布
+```
+/opt/docker
+```
+删除镜像
+```
+# 获取账号信息
+echo -n "jack：123456" | base64
+amFjazoxMjM0NTY=
+列出所有镜像列表,GET  /v2/_catalog
+curl -v -H "Authorization: Basic amFjazoxMjM0NTY=" -X GET http://192.168.163.114:5000/v2/_catalog
+查看上传的镜像信息,GET  /v2/<name>/tags/list
+curl -v -H "Authorization: Basic amFjazoxMjM0NTY=" -X GET http://192.168.163.114:5000/v2/model/singleuser/tags/list
+删除该镜像,DELETE /v2/<name>/manifests/<reference>
+curl -v -X DELETE http://192.168.163.114:5000/v2/hello/manifests/sha256:8072a54ebb3bc136150e2f2860f00a7bf45f13eeb917cca2430fcd0054c8e51b
+接口只是删除了元数据，镜像数据并没有删除，进入镜像仓库容器内部执行删除命令来回收空间
+registry garbage-collect /etc/docker/registry/config.yml
+```
 
 #### 事故排查
 - 常用命令
