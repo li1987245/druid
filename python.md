@@ -18,7 +18,7 @@ conda config --set show_channel_urls yes
 conda create -n tensorflow python=3.5
 activate tensorflow
 pip install --ignore-installed --upgrade https://storage.googleapis.com/tensorflow/windows/cpu/tensorflow-0.12.0-cp35-cp35m-win_amd64.whl
-
+python setup.py bdist_wheel
 //linux
 conda create -n pyspark python=3.6 ipython pyspark jupyter
 conda activate pyspark

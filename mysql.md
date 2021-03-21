@@ -171,10 +171,12 @@ innodb_autoinc_lock_mode=1(default)。
 2=所有insert采用轻量级（但是replication只能row-base）
 
 RR一致级别下SQL对应InnoDB Lock情形
-Select … from 无lock，SERIALIZABLE存在S Next-Key lock
+Select … from 无lock，SERIALIZABLE事务隔离级别存在S Next-Key lock
 Select … from… lock in share mode存在S Next-Key lock
 Select… from… for update存在X Next-Key lock
-Insert… values(…)存在X row record lock；对于存在auto_increment列，存在X lock在auto_increment列的index，特殊的表级AUTO-INC lock；如果insert产生duplicate-key错误，则在duplicate index record设置S lock，如果多个session插入同一行则可以产生deadlock（示例Insert duplicate）（5.1版本，deadlock会等待，5.6deadlock快速释放，无需等innodb_lock_wait_timeout
+Insert… values(…)存在X row record lock；对于存在auto_increment列，存在X lock在auto_increment列的index，特殊的表级AUTO-INC lock；
+    如果insert产生duplicate-key错误，则在duplicate index record设置S lock，如果多个session插入同一行则可以产生deadlock（示例Insert duplicate）
+    5.1版本，deadlock会等待，5.6deadlock快速释放，无需等innodb_lock_wait_timeout
 Insert into T select … from S where…存在T表的X row record lock，S表存在S的Next-Key lock
 Create table … select…from S，S表存在S的Next-Key lock
 Replace…如果无主键冲突，X row record lock，否则X Next-Key lock
@@ -190,7 +192,10 @@ Note：RR隔离级别下，为了减少Next-key lock可以设置innodb_locks_uns
 使用mysqladmin debugmysqladmin -S /DATA/mydata/mysql.sock debug
 使用innodb_lock_monitor需要创建表： （任意DB中，不使用时drop此表）CREATE TABLE innodb_lock_monitor(a INT) ENGINE=INNODB;
 InnoDB monitor有：innodb_monitor，innodb_lock_monitor，innodb_table_monitor，innodb_tablespace_monitor，开启后定期执行将结果输出到errorlog（前2个20s，后两个60s，Note：不使用时注意drop相关表，停止monitor）
-5.5版本以后，使用information_schema中相关表 innodb_trx
+5.5版本以后，使用information_schema中相关表 
+innodb_trx ## 当前运行的所有事务
+innodb_locks ## 当前出现的锁
+innodb_lock_waits ## 锁等待的对应关系
 mysql> show OPEN TABLES where In_use > 0;
 +---------------------+---------------------+--------+-------------+
 | Database            | Table               | In_use | Name_locked |
