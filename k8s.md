@@ -469,7 +469,7 @@ umount /opt/jupyter_space
 umount.nfs4: /opt/jupyter_space: device is busy
 lsof /opt/jupyter_space
 kill -9 9564
-```
+```lables
 
 -宿主机无法访问外网
 ```
