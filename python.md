@@ -179,6 +179,13 @@ conda list -e > requirements.txt #conda批量导出包含环境中所有组件�
 conda install --yes --file requirements.txt #conda批量安装requirements.txt
 
 conda install nodejs -c conda-forge --repodata-fn=repodata.json #安装nodejs最新版本
+conda config --remove-key channels
+conda config --add channels r # R软件包
+conda config --add channels conda-forge # Conda社区维护的不在默认通道中的软件
+conda config --add channels bioconda # 生物信息学类工具
+conda install --channel https://conda.anaconda.org/conda-forge/label/cf202003 nodejs
+# 查找package信息
+conda search tophat
 # 升级pip
 python -m pip install --upgrade pip
 #显示目前pip的数据源有哪些
@@ -225,6 +232,23 @@ pip freeze > requirements.txt
 pip install -r requirements.txt
 ```
 
+### tornado
+1、 解决Python Tornado的某个页面不需要进行xsrf的检查
+```
+重写check_xsrf_cookie()
+def check_xsrf_cookie(self):
+     # 非常有用的在单页面禁用xsrf_cookie的检查
+     return True
+```
+2、xsrf_cookies
+```
+settings = {
+    "cookie_secret": "__TODO:_GENERATE_YOUR_OWN_RANDOM_VALUE_HERE__",
+    "login_url": "/login",
+    "xsrf_cookies": True,
+}
+```
+
 #### FAQ
 1. pip is configured with locations that require TLS/SSL, however the ssl module in Python is not available.
 Can't connect to HTTPS URL because the SSL module is not available
@@ -242,6 +266,11 @@ pip install -r requirements.txt
 anaconda search -t conda celery
 anaconda show Winand/celery
 conda install --channel https://conda.anaconda.org/Winand celery
+```
+3. ImportError: DLL load failed while importing win32api: 找不到指定的模块。
+```
+找到文件pywin32_postinstall.py的路径，env对应Scripts下
+执行python pywin32_postinstall.py -install
 ```
 
 

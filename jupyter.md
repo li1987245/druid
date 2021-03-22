@@ -171,3 +171,8 @@ async def main():
     await old_style_coroutine()
 ```
 
+### FAQ
+1. hook-image-awaiter 镜像状态ERROR
+```
+
+```

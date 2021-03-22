@@ -1281,3 +1281,11 @@ YARN    NodeManager 8041    yarn.nodemanager.address    NM中container manager�
 YARN    JobHistory Server   10020   mapreduce.jobhistory.address    IPC
 YARN    JobHistory Server   19888   mapreduce.jobhistory.webapp.address http服务端口
 ```
+
+### winutils 安装
+1、下载winutils
+https://github.com/steveloughran/winutils.git
+2、配置环境变量
+```
+HADOOP_HOME = D:\tool\hadoop-common-2.6.0
+```

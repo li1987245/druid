@@ -110,7 +110,6 @@ kubeadm init \
         --cert-dir /etc/kubernetes/pki \
         --control-plane-endpoint 192.168.163.110 \
         --image-repository registry.cn-hangzhou.aliyuncs.com/google_containers \
-        --kubernetes-version 1.18.2 \
         --pod-network-cidr 10.10.0.0/16 \
         --service-cidr 10.12.0.0/16 \
         --service-dns-domain cluster.local \
@@ -122,15 +121,19 @@ To start using your cluster, you need to run the following as a regular user:
   sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
   sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
+Alternatively, if you are the root user, you can run:
+
+  export KUBECONFIG=/etc/kubernetes/admin.conf
+
 You should now deploy a pod network to the cluster.
 Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
   https://kubernetes.io/docs/concepts/cluster-administration/addons/
 
 You can now join any number of the control-plane node running the following command on each as root:
 
-  kubeadm join 192.168.163.110:6443 --token 32wz8w.aijmbmag14xr61q0 \
-    --discovery-token-ca-cert-hash sha256:fab3c725c7959c719d50ab3e87e82d3dda8c24f12f283f8ee7364adfb0dc91ac \
-    --control-plane --certificate-key 1b113912cb15942bcb09111ef98c48a01d0e2bf92da0cd2ee03e60bb5a120cfc
+  kubeadm join 192.168.163.110:6443 --token 7t8qu1.mk640ti1gkkaa3jp \
+    --discovery-token-ca-cert-hash sha256:f677f730c8d89af51ec43339757e8240487d109c3aacfd61b4570b4c7d428331 \
+    --control-plane --certificate-key 9ac53f57584f719698b3bcc806f7e023def147c4092dcf49ffda047a379e3d68
 
 Please note that the certificate-key gives access to cluster sensitive data, keep it secret!
 As a safeguard, uploaded-certs will be deleted in two hours; If necessary, you can use
@@ -138,8 +141,8 @@ As a safeguard, uploaded-certs will be deleted in two hours; If necessary, you c
 
 Then you can join any number of worker nodes by running the following on each as root:
 
-kubeadm join 192.168.163.110:6443 --token 32wz8w.aijmbmag14xr61q0 \
-    --discovery-token-ca-cert-hash sha256:fab3c725c7959c719d50ab3e87e82d3dda8c24f12f283f8ee7364adfb0dc91ac
+kubeadm join 192.168.163.110:6443 --token 7t8qu1.mk640ti1gkkaa3jp \
+    --discovery-token-ca-cert-hash sha256:f677f730c8d89af51ec43339757e8240487d109c3aacfd61b4570b4c7d428331
 
 初始化 Control-plane/Master 节点，命名参数说明
 kubeadm init \

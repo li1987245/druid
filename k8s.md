@@ -11,10 +11,42 @@ ADD jdk1.8.tar.gz /opt/
 ENV JAVA_HOME=
 ENV CLASS_PATH=.:$JAVA_HOME/lib:$CLASS_PATH \
 PATH=$JAVA_HOME/bin:$PATH
-ENV LANG en_US.utf8
+ENV LANG en_US.utf8 #bust the cache
 ```
 2.docker build -t jdk:8 -f Dockerfile .
 
+
+#bust the cache 表示从该行开始不使用缓存，也可在build是指定--no-cache不使用缓存构建 docker build --no-cache .
+
+3. 基于已有镜像打新tag
+```
+docker run --name singleuser -d 192.168.163.114:5000/model/singleuser:3.3
+docker exec -it -u root  singleuser bash
+docker commit -m="" singleuser 192.168.163.114:5000/model/singleuser:3.4
+```
+4. 多阶段构建
+```
+############ build stage ###############
+FROM node:10-stretch as BackendPackage
+RUN mkdir -p /tmp/development && \
+    mkdir -p /code
+COPY ./package.json /tmp/development
+RUN cd /tmp/development &&  npm install
+COPY ./ /code
+RUN cd /code &&   npm run build
+    mv /built/ /prod && \
+    cp package.json /prod && \
+    cd /prod && \
+    rm -rf node_modules && \
+    cp -r /tmp/production/node_modules /prod
+######## production stage ############
+FROM node:10-stretch
+WORKDIR /opt
+ENV PORT=8080
+COPY --from=BackendPackage /prod/ /opt/
+EXPOSE $PORT
+CMD ["node", "bootstrap.js"]
+```
 - docker 常用操作
 ```
 # 启动新容器
@@ -29,6 +61,12 @@ docker container stop jdk
 docker container start jdk
 # 删除容器
 docker container rm jdk
+
+// 停止相关的镜像
+docker ps -a | grep "Exited" | awk '{print $1 }'|xargs docker stop
+docker ps -a | grep "Exited" | awk '{print $1 }'|xargs docker rm
+// 刪除鏡像
+docker images|grep none|awk '{print $3 }'|xargs docker rmi
 ```
 - docker安装
 ```
@@ -198,7 +236,7 @@ for service in kube-apiserver kube-controller-manager kubectl kubelet kube-proxy
 docker volume rm etcd
 rm -r /var/etcd/backups/*
 
-kubeadm reset
+kubeadm reset #在被移除节点执行
 systemctl stop kubelet
 systemctl stop docker
 rm -rf /var/lib/cni/
@@ -357,10 +395,23 @@ amFjazoxMjM0NTY=
 curl -v -H "Authorization: Basic amFjazoxMjM0NTY=" -X GET http://192.168.163.114:5000/v2/_catalog
 查看上传的镜像信息,GET  /v2/<name>/tags/list
 curl -v -H "Authorization: Basic amFjazoxMjM0NTY=" -X GET http://192.168.163.114:5000/v2/model/singleuser/tags/list
-删除该镜像,DELETE /v2/<name>/manifests/<reference>
-curl -v -X DELETE http://192.168.163.114:5000/v2/hello/manifests/sha256:8072a54ebb3bc136150e2f2860f00a7bf45f13eeb917cca2430fcd0054c8e51b
+获取镜像digest值
+#curl --cacert /etc/docker/certs.d/192.168.0.34\:5000/ca.crt -H "Accept:application/vnd.docker.distribution.manifest.v2+json" https://192.168.0.34:5000/v2/messer/manifests/1.0
+curl -H "Authorization: Basic amFjazoxMjM0NTY=" -H "Accept: application/vnd.docker.distribution.manifest.v2+json" -I -X GET http://192.168.163.114:5000/v2/model/singleuser/manifests/3.3
+使用返回值里面的Docker-Content-Digest: sha256:1fac4e5295b825b2c81ee28ed6f796fa55a2c27f1a5e9b2fce9c8f30a744e9a1删除该镜像,DELETE /v2/<name>/manifests/<reference>
+curl -H "Authorization: Basic amFjazoxMjM0NTY=" -I -X DELETE http://192.168.163.114:5000/v2/model/singleuser/manifests/sha256:1fac4e5295b825b2c81ee28ed6f796fa55a2c27f1a5e9b2fce9c8f30a744e9a1
 接口只是删除了元数据，镜像数据并没有删除，进入镜像仓库容器内部执行删除命令来回收空间
 registry garbage-collect /etc/docker/registry/config.yml
+验证删除成功
+curl -H "Authorization: Basic amFjazoxMjM0NTY=" -H "Accept: application/vnd.docker.distribution.manifest.v2+json" -I -X GET http://192.168.163.114:5000/v2/model/singleuser/manifests/3.3
+```
+docker免密登陆私有镜像库
+```
+通过创建docker-registry类的secrets，实现类docker login免密
+kubectl --namespace jhub create secret docker-registry regcred \
+--docker-server=192.168.163.114:5000 \
+--docker-username=jack \
+--docker-password=123456
 ```
 
 #### 事故排查
