@@ -18,11 +18,17 @@ ENV LANG en_US.utf8 #bust the cache
 
 #bust the cache 表示从该行开始不使用缓存，也可在build是指定--no-cache不使用缓存构建 docker build --no-cache .
 
-3. 基于已有镜像打新tag
+3. 基于已有镜像打新tag，使用docker commit命令创建镜像
 ```
 docker run --name singleuser -d 192.168.163.114:5000/model/singleuser:3.3
 docker exec -it -u root  singleuser bash
 docker commit -m="" singleuser 192.168.163.114:5000/model/singleuser:3.4
+
+
+docker run -it -u root  ${image id} bash
+docker diff 容器ID
+docker commit -m "new container" 容器ID 镜像名称:tag
+docker commit -m "" 3bd5befcf3e0 192.168.163.114:5000/model/jupyterhub:14.5
 ```
 4. 多阶段构建
 ```
