@@ -30,6 +30,8 @@ docker diff 容器ID
 docker commit -m "new container" 容器ID 镜像名称:tag
 docker run -it -u root  6520d40c43e0 bash
 docker commit -m "" 3bd5befcf3e0 192.168.163.114:5000/model/jupyterhub:14.5
+
+/usr/local/lib/python3.8/dist-packages/jupyterhub/handlers/base.py
 ```
 4. 多阶段构建
 ```
