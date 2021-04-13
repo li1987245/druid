@@ -30,8 +30,6 @@ docker diff 容器ID
 docker commit -m "new container" 容器ID 镜像名称:tag
 docker run -it -u root  6520d40c43e0 bash
 docker commit -m "" 3bd5befcf3e0 192.168.163.114:5000/model/jupyterhub:14.5
-
-/usr/local/lib/python3.8/dist-packages/jupyterhub/handlers/base.py
 ```
 4. 多阶段构建
 ```
@@ -76,6 +74,16 @@ docker ps -a | grep "Exited" | awk '{print $1 }'|xargs docker stop
 docker ps -a | grep "Exited" | awk '{print $1 }'|xargs docker rm
 // 刪除鏡像
 docker images|grep none|awk '{print $3 }'|xargs docker rmi
+//删除tag为none的镜像
+docker rmi $(docker images -f "dangling=true" -q)
+//多个镜像tag为none，且IMAGE ID相同时,使用docker rmi REPOSITORY@DIGEST 方式删除
+docker images --digests=true
+docker rmi 192.168.163.114:5000/model/singleuser@sha256:f4893bed14ef4cd857e4994003293758964ed90dd8415f01ccc8134c4d4ed46e
+//强制删除
+docker rmi 9eaf --force
+//image has dependent child images
+docker image inspect --format='{{.RepoTags}} {{.Id}} {{.Parent}}' $(docker image ls -q --filter since=XXX)    # XXX指镜像ID
+docker rm REPOSITORY:TAG
 ```
 - docker安装
 ```
@@ -273,6 +281,22 @@ There are five different ways you can express the chart you want to install:
 3. By path to an unpacked chart directory: helm install mynginx ./nginx
 4. By absolute URL: helm install mynginx https://example.com/charts/nginx-1.2.3.tgz
 5. By chart reference and repo url: helm install --repo https://example.com/charts/ mynginx nginx
+```
+- helm list
+```
+helm list -n jhub
+```
+- helm uninstall
+```
+helm  uninstall jhub -n jhub
+```
+- helm  search
+```
+helm  search  repo  nginx
+```
+- helm upgrade
+```
+helm upgrade hello-world  /kubernetes/helm/hello-world
 ```
 
 #### docker
