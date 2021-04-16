@@ -526,3 +526,21 @@ pv和pvc是一对一绑定的。但是多个pod可以挂载同一个pvc。而且
 ```
 Grafana
 
+- npm私服
+```
+docker volume create nexus-data
+#查看volume信息
+docker inspect nexus-data
+#启动nexus
+docker run -d --name nexus  --restart=always -p 8081:8081 -v nexus-data:/nexus-data  sonatype/nexus3
+docker exec -it ee34232aa37d bash
+cat /nexus-data/admin.password 查看密码
+curl -u admin:917a58b0-15e5-4ed4-97b6-b95a413ce89e http://192.168.163.114:8081/service/metrics/ping
+http://192.168.75.131:8081/ 并登陆，有户名admin，密码917a58b0-15e5-4ed4-97b6-b95a413ce89e
+设置npm proxy
+https://registry.npm.taobao.org
+https://registry.npmjs.org
+设置npm group
+http://192.168.163.114:8081/repository/npm-group/
+```
+
