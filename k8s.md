@@ -74,6 +74,16 @@ docker ps -a | grep "Exited" | awk '{print $1 }'|xargs docker stop
 docker ps -a | grep "Exited" | awk '{print $1 }'|xargs docker rm
 // 刪除鏡像
 docker images|grep none|awk '{print $3 }'|xargs docker rmi
+//删除tag为none的镜像
+docker rmi $(docker images -f "dangling=true" -q)
+//多个镜像tag为none，且IMAGE ID相同时,使用docker rmi REPOSITORY@DIGEST 方式删除
+docker images --digests=true
+docker rmi 192.168.163.114:5000/model/singleuser@sha256:f4893bed14ef4cd857e4994003293758964ed90dd8415f01ccc8134c4d4ed46e
+//强制删除
+docker rmi 9eaf --force
+//image has dependent child images
+docker image inspect --format='{{.RepoTags}} {{.Id}} {{.Parent}}' $(docker image ls -q --filter since=XXX)    # XXX指镜像ID
+docker rm REPOSITORY:TAG
 ```
 - docker安装
 ```
@@ -271,6 +281,22 @@ There are five different ways you can express the chart you want to install:
 3. By path to an unpacked chart directory: helm install mynginx ./nginx
 4. By absolute URL: helm install mynginx https://example.com/charts/nginx-1.2.3.tgz
 5. By chart reference and repo url: helm install --repo https://example.com/charts/ mynginx nginx
+```
+- helm list
+```
+helm list -n jhub
+```
+- helm uninstall
+```
+helm  uninstall jhub -n jhub
+```
+- helm  search
+```
+helm  search  repo  nginx
+```
+- helm upgrade
+```
+helm upgrade hello-world  /kubernetes/helm/hello-world
 ```
 
 #### docker
@@ -499,4 +525,22 @@ pv和pvc是一对一绑定的。但是多个pod可以挂载同一个pvc。而且
 通常使用的流程是，首先创建存储，在创建pv，接着创建pvc，pod挂载到相应的pvc。
 ```
 Grafana
+
+- npm私服
+```
+docker volume create nexus-data
+#查看volume信息
+docker inspect nexus-data
+#启动nexus
+docker run -d --name nexus  --restart=always -p 8081:8081 -v nexus-data:/nexus-data  sonatype/nexus3
+docker exec -it ee34232aa37d bash
+cat /nexus-data/admin.password 查看密码
+curl -u admin:917a58b0-15e5-4ed4-97b6-b95a413ce89e http://192.168.163.114:8081/service/metrics/ping
+http://192.168.75.131:8081/ 并登陆，有户名admin，密码917a58b0-15e5-4ed4-97b6-b95a413ce89e
+设置npm proxy
+https://registry.npm.taobao.org
+https://registry.npmjs.org
+设置npm group
+http://192.168.163.114:8081/repository/npm-group/
+```
 
