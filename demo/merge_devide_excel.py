@@ -58,7 +58,7 @@ def write_excel(file_name,data):
         origin = row[1]
         KR = row[2]
         if row[3]:
-            associates = re.findall(r'(\S+)', row[3], re.S)
+            associates = re.findall(r'([\u4e00-\u9fa5]+)', row[3], re.S)
             for associate in associates:
                 sheet.write(i, 0, name)
                 sheet.write(i, 1, origin)
