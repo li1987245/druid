@@ -15,6 +15,7 @@ file->setting->project interpreter->add local
 安装python包：
 conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
 conda config --set show_channel_urls yes
+conda clean -i #清除conda缓存
 conda create -n tensorflow python=3.5
 activate tensorflow
 pip install --ignore-installed --upgrade https://storage.googleapis.com/tensorflow/windows/cpu/tensorflow-0.12.0-cp35-cp35m-win_amd64.whl
