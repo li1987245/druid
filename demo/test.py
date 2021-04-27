@@ -23,10 +23,10 @@ def log(f):
     return fn
 
 
-@timerit(10)
+@timerit(1)
 def foo():
     print(1)
-    sleep(random.randint(1, 5))
+    sleep(random.randint(1, 2))
 
 
 if __name__ == '__main__':
@@ -34,8 +34,15 @@ if __name__ == '__main__':
     # df = pd.read_csv("/opt/xingjie/data/data.txt",delimiter="\t",header=None,names=['province_code','business_type','mobile','city_code','raw_latitude','raw_longitude','call_time','error_code','called_mobile','imsi','station_id'])
     # lat = df['raw_latitude'].values
     # lat = lat.reshape(42614, 1)
-    lst = []
-    lst.append('%s,%s,%s' % ('abc','123','ABC'))
-    with open('cd_geo.csv', 'w') as f:
-        csv_writer = csv.writer(f, dialect='excel')
-        csv_writer.writerows([s.split(',') for s in list(set(lst))])
+    # lst = []
+    # lst.append('%s,%s,%s' % ('abc','123','ABC'))
+    # with open('cd_geo.csv', 'w') as f:
+    #     csv_writer = csv.writer(f, dialect='excel')
+    #     csv_writer.writerows([s.split(',') for s in list(set(lst))])
+    import re
+
+    result3 = re.findall(r'(.+(?!@))', '@马松龄 @赖力鹏@王天元 ', re.S)  # 利用re.S开启多行模式来忽略\n换行
+    print(result3)
+
+    result4 = re.findall(r'@([\u4e00-\u9fa5]+)', '@马松龄 @赖力鹏@王天元 ', re.S)  # 利用re.S开启多行模式来忽略\n换行
+    print(result4)

@@ -232,6 +232,9 @@ pip check xxx #检查xxx包的依赖是否合适
 pip freeze > requirements.txt
 pip install -r requirements.txt
 pip wheel -w DIR -r requirements.txt
+# 也可以自己制定文件夹,如当前目录下的tmp/wheels文件夹
+pip wheel -r requirements.txt --wheel-dir=./tmp/wheels
+pip install --no-index --find-links=path/tmp/wheels -r requirements.txt
 ```
 
 ### tornado
