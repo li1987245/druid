@@ -176,3 +176,12 @@ async def main():
 ```
 
 ```
+2、“zmq.h”: No such file or directory
+```
+切换到base环境
+卸载pyzmq
+pip uninstall pyzmq
+删除D:\tool\Anaconda3\Lib\site-packages\zmq文件夹
+重新安装pyzmq
+pip install pyzmq
+```

@@ -667,3 +667,17 @@ set hive.merge.smallfiles.avgsize=16000000 #当输出文件的平均大小小于
 内存溢出
 map出现GC overhead limit exceeded，JVM花费了98%的时间进行垃圾回收，而只得到2%可用的内存，频繁的进行内存回收(最起码已经进行了5次连续的垃圾回收)，JVM就会曝出java.lang.OutOfMemoryError: GC overhead limit exceeded错误
 ```
+2、随机抽样
+```
+select *
+from
+    (  select * ,row_number() over(partition by file_id order by rand()) as rank
+        from  table a
+     ) a
+where rank<=10 ;
+
+
+select *
+from  table a
+distribute by rand() sort by rand() limit 10 ;
+```

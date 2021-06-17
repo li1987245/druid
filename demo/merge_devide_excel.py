@@ -75,10 +75,11 @@ def write_excel(file_name,data):
 
     # sheet.write_merge(i, i + 9, 0, 0, name[j].split('-')[0]
     # 保存
-    xls.save(f"H:/深圳时办公/21年Q2 OKR/new/{file_name}.xls")
-file_names = ["2021Q2-OKR制定（财务部）","2021Q2-OKR制定（产品部）","2021Q2-OKR制定（大分子）","2021Q2-OKR制定（工程部）"
-    ,"2021Q2-OKR制定（赖力鹏）","2021Q2-OKR制定（人事行政部）","2021Q2-OKR制定（数据科学部）","2021Q2-OKR制定（算法部）"
-    ,"2021Q2-OKR制定（小分子）-补充后","2021Q2-OKR制定（战略发展部）","2021Q2-OKR制定（综合部）"]
+    xls.save(f"C:/Users/jinwei.li/Desktop/new/{file_name}.xls")
+# file_names = ["2021Q2-OKR制定（财务部）","2021Q2-OKR制定（产品部）","2021Q2-OKR制定（大分子）","2021Q2-OKR制定（工程部）"
+#     ,"2021Q2-OKR制定（赖力鹏）","2021Q2-OKR制定（人事行政部）","2021Q2-OKR制定（数据科学部）","2021Q2-OKR制定（算法部）"
+#     ,"2021Q2-OKR制定（小分子）-补充后","2021Q2-OKR制定（战略发展部）","2021Q2-OKR制定（综合部）"]
+file_names = ["2021Q2-OKR制定（赖力鹏）"]
 for file_name in file_names:
-    data = read_excel(f"H:/深圳时办公/21年Q2 OKR/{file_name}.xlsx")
+    data = read_excel(f"C:/Users/jinwei.li/Desktop/{file_name}.xlsx")
     write_excel(file_name,data)

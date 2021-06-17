@@ -18,6 +18,7 @@ from utils.performance import timerit
 def log(f):
     def fn(*args, **kwargs):
         print('call ' + f.__name__ + '()...')
+        sleep(10)
         return f(*args, **kwargs)
 
     return fn

@@ -242,7 +242,10 @@ kubectl get nodes -o json | jq -c 'path(..)|[.[]|tostring]|join(".")'
 
 # 生成一个句点分隔的树，其中包含为pod等返回的所有键
 kubectl get pods -o json | jq -c 'path(..)|[.[]|tostring]|join(".")'
-
+#Use kubectl jsonpath To get a specific pod's UID:
+kubectl get pods -n <namespace> <pod-name> -o jsonpath='{.metadata.uid}'
+#Use kubectl custom-columns List all PodName along with its UID of a namespace:
+kubectl get pods -n <namespace> -o custom-columns=PodName:.metadata.name,PodUID:.metadata.uid
 
 清理所有pods
 kubectl delete node --all
@@ -334,6 +337,12 @@ sudo yum install docker-ce docker-ce-cli containerd.io
 ```
 sudo systemctl start docker
 docker -v
+```
+常用docker镜像
+```
+docker search busybox #BusyBox 集成了三百多个最常用Linux命令和工具
+docker pull busybox
+docker run -it --rm busybox
 ```
 安装docker hub
 ```

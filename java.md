@@ -164,7 +164,8 @@ java -**
 -verbose:gc
 -XX:+PrintGCDetails
 -XX:+PrintGCTimeStamps
--Xloggc:../logs/gc.log
+-Xloggc:../logs/gc-%t.log # %t会给文件名添加时间戳后缀，格式是YYYY-MM-DD_HH-MM-SS
+-XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=10 -XX:GCLogFileSize=512k # gc日志滚动打印
 
 降低stop the world时间 + 吞吐量（应用运行时间/（应用+gc时间））
 ```
@@ -366,3 +367,12 @@ ConfigurableApplicationContext configurableApplicationContext = springApplicatio
 T bean = configurableApplicationContext.getBean(T.class);
 Environment env =configurableApplicationContext.getEnvironment()
 ```
+
+#### 连接池
+##### druid
+```
+打印druid配置信息
+java -cp "./druid-1.0.14.jar:$JAVA_HOME/lib/tools.jar" com.alibaba.druid.support.console.DruidStat -ds -detail 13813
+```
+
+httpclient请求池每个请求最多复用100次

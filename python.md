@@ -139,6 +139,17 @@ print os.path.abspath(os.path.join(os.getcwd(), "../.."))
   ```markdown
   基于概率模型:高斯混合模型（GMM，Gaussian Mixture Models）。基于神经网络模型的方法:SOM（Self Organized Maps）
   ```
+- python 语法
+```
+列表解析总共有两种形式：
+1. [i for i in range(k) if condition]：此时if起条件判断作用，满足条件的，将被返回成为最终生成的列表的一员。
+
+2. [i if condition else exp for exp]：此时if...else被用来赋值，满足条件的i以及else被用来生成最终的列表。
+
+```
+
+
+
 - conda && pip
 ```
 conda update -n base conda        #update最新版本的conda
@@ -180,7 +191,7 @@ conda list -e > requirements.txt #conda批量导出包含环境中所有组件�
 conda install --yes --file requirements.txt #conda批量安装requirements.txt
 
 conda install nodejs -c conda-forge --repodata-fn=repodata.json #安装nodejs最新版本
-conda config --remove-key channels
+conda config --remove-key channels #清除自定义源，使用默认源
 conda config --add channels r # R软件包
 conda config --add channels conda-forge # Conda社区维护的不在默认通道中的软件
 conda config --add channels bioconda # 生物信息学类工具
