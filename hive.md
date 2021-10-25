@@ -221,7 +221,8 @@ CREATE [EXTERNAL] TABLE IF NOT EXISTS employees (
     subordinates(下属) ARRAY<STRING>,
     detail MAP<STRING, FLOAT>,
     address STRUCT<street:STRING, city:STRING, state:STRING, zip:INT>
-) PARTITIONED BY (country STRING, state STRING) ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t';
+) PARTITIONED BY (country STRING, state STRING) ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+LOCATION 'xxx';;
 
 数据样例：
 tom   11.8    1:2:3:4  jack:80,lily:60,jerry:70  苏州街:北京:1
@@ -294,11 +295,14 @@ ALTER TABLE table ADD IF NOT EXISTS PARTITION (dt='20130101') LOCATION '/user/ha
 
 ALTER TABLE table ADD PARTITION (dt='2008-08-08', country='us') location '/path/to/us/part080808' PARTITION (dt='2008-08-09', country='us') location '/path/to/us/part080809';  //一次添加多个分区
 
-msck repair table 表名 #检测如果HDFS目录下存在但表的metastore中不存在的partition元信息，更新到metastore中
+msck repair table 表名 #修复Hive表分区,检测如果HDFS目录下存在但表的metastore中不存在的partition元信息，更新到metastore中
 
 DESCRIBE FORMATTED test PARTITION (dt='20190805'); #显示分区详细信息
 show partitions tbl_name;
 show table extended like 'tbl_name' partition (datestr='20191107');
+alter table tb_partition drop partition (etl_dt>='20181102',etl_dt<='20181104')
+//导出csv数据
+hive -e "set hive.cli.print.header=true; select * from data_table where some_query_conditions" | sed 's/[\t]/,/g'  > hhd.csv
 
 hive还可以在是建表的时候就指定外部表的数据源路径，但这样的坏处是只能加载一个数据源了：
 CREATE EXTERNAL TABLE table4(id INT, name string)
@@ -318,6 +322,8 @@ LOCATION ‘file:////home/hadoop/data/’;
 DROP TABLE table;
 
 ALTER TABLE table DROP IF EXISTS PARTITION (dt='2008-08-08');
+
+ALTER TABLE table DROP PARTITION (dates>'2018-04-14',dates<'2018-04-16');
 
 ALTER TABLE table DROP IF EXISTS PARTITION (dt='2008-08-08', country='us');
 ````
@@ -380,49 +386,6 @@ CLUSTER BY col_list|[DISTRIBUTE BY col_list]
 [SORT BY col_list]
 ]
 [LIMIT number]
-set hive.map.aggr=true|hive.groupby.mapaggr.checkinterval=100000 设置map端聚合
-set hive.groupby.skewindata=true 防止数据倾斜
-
-set hive.vectorized.execution.enabled = true;
-set hive.exec.submit.local.task.via.child=false; //设置是否为本地task map启动子进程
-set hive.exec.parallel=true;
-set hive.exec.parallel.thread.number=8; //设置mr并行度
-set  hive.auto.convert.join=true; //自动识别mapjoin
-set hive.mapjoin.smalltable.filesize=2500000; //小于设定值时使用mapjoin
-set hive.hadoop.supports.splittable.combineinputformat=true;
-set hive.map.aggr=true; //聚合优化
-set hive.groupby.mapaggr.checkinterval = 100000; //Map端进行聚合操作的条目数目
-set hive.groupby.skewindata=true; //数据倾斜的时候进行负载均衡
-set hive.merge.smallfiles.avgsize=256000000;
-set mapred.max.split.size=4096000000;
-set mapred.min.split.size.per.node=4096000000;
-set mapred.min.split.size.per.rack=4096000000;
-set hive.merge.mapfiles = true;
-set hive.merge.mapredfiles = true;
-set hive.merge.size.per.task = 256000000;
-set hive.merge.smallfiles.avgsize=256000000;
-set hive.exec.reducers.bytes.per.reducer=4096000000;
-set mapreduce.job.jvm.numtasks=8;
-set mapreduce.job.queuename=root.data;
-
-set hive.exec.mode.local.auto=true; //本地模式在单台机器上处理所有的任务
-set hive.exec.mode.local.auto.inputbytes.max=134217728;
-set hive.exec.mode.local.auto.input.files.max=4;
-set mapred.map.tasks.speculative.execution=true; //hadoop mapreduce控制推测执行的参数
-set mapred.reduce.tasks.speculative.execution=true;
-set hive.mapred.reduce.tasks.speculative.execution=true; //hive本身控制推测执行的参数
-
-set hive.fetch.task.conversion=more; //该属性修改为more以后，在全局查找、字段查找、limit查找等都不走mapreduce,none为走mr
-
-set hive.limit.optimize.enable=true; //将针对查询对元数据进行抽样
-set hive.limit.row.max.size=100000;
-set hive.limit.optimize.limit.file=10;
-
-set hive.exec.dynamic.partition=true;
-set hive.exec.dynamic.partition.mode=nonstrict;
-set hive.exec.max.dynamic.partitions.pernode=10000;
-set hive.exec.max.dynamic.partitions=100000;
-set hive.exec.max.created.files=1000000;
 
 1.map数的公式
 set mapreduce.input.fileinputformat.split.maxsize=1024;
@@ -466,7 +429,7 @@ sort by 不受 hive.mapred.mode 的值是否为 strict 和 nostrict 的影响。
 
 DISTRIBUTE BY 排序查询
 按照指定的字段对数据划分到不同的输出 Reduce 文件中，操作如下。
-hive> insert overwrite local directory '/home/hadoop／ywendeng/test' select * from group_test distribute by length(gender);
+hive> insert overwrite local directory '/home/jinwei.li/test' select * from group_test distribute by length(gender);
 此方法根据 gender 的长度划分到不同的 Reduce 中，最终输出到不同的文件中。length 是内建函数，也可以指定其它的函数或者使用自定义函数。
 
 cluster by 除了具有 distribute by 的功能外还兼具 sort by 的功能。
@@ -562,24 +525,34 @@ dense_rank() over() : 排名函数，有并列名次，名次连续。如：1，
 ```
 9. 配置
 ```
-参考 org.apache.hadoop.hive.conf.HiveConf
-hive.exec.orc.split.strategy 参数控制在读取ORC表时生成split的策略。BI策略以文件为粒度进行split划分；ETL策略会将文件进行切分，多个stripe组成一个split；HYBRID策略为：当文件的平均大小大于hadoop最大split值（默认256 * 1024 * 1024）时使用ETL策略，否则使用BI策略。
-对于一些较大的ORC表，可能其footer较大，ETL策略可能会导致其从hdfs拉取大量的数据来切分split，甚至会导致driver端OOM，因此这类表的读取建议使用BI策略。
-对于一些较小的尤其有数据倾斜的表（这里的数据倾斜指大量stripe存储于少数文件中），建议使用ETL策略
-设置hive日志级别
-hive --hiveconf hive.root.logger=DEBUG,console
-hive设置mr日志级别
-set mapreduce.map.log.level=DEBUG;
+
+export HIVE_AUX_JARS_PATH=/opt/phoenix/jars/phoenix-hive-4.14.0-HBase-1.2.jar:/opt/phoenix/jars/phoenix-core-4.14.0-HBase-1.2.jar:/opt/phoenix/jars/tephra-api-0.13.0-incubating.jar:/opt/phoenix/jars/tephra-core-0.13.0-incubating.jar:/opt/phoenix/jars/tephra-hbase-compat-1.1-0.13.0-incubating.jar:/opt/phoenix/jars/twill-common-0.6.0-incubating.jar:/opt/phoenix/jars/twill-discovery-api-0.6.0-incubating.jar:/opt/phoenix/jars/twill-discovery-core-0.6.0-incubating.jar:/opt/phoenix/jars/twill-zookeeper-0.6.0-incubating.jar:/opt/phoenix/jars/disruptor-3.3.6.jar:/opt/phoenix/jars/jackson-core-asl-1.9.2.jar:/opt/phoenix/jars/jackson-jaxrs-1.9.2.jar:/opt/phoenix/jars/jackson-mapper-asl-1.9.2.jar:/opt/phoenix/jars/jackson-xc-1.9.2.jar:/opt/phoenix/jars/antlr-runtime-3.4.jar:/opt/phoenix/jars/zookeeper-3.4.6.2.6.5.0-292.jar:$HIVE_AUX_JARS_PATH
 ```
 
 10. 查看orc文件
 ```
 hive --orcfiledump hdfs路径
+hive --orcfiledump /user/rpt_supplier_wrapper_offline_levels_orc/000000_0
 ```
 
 11. hadoop监控界面查看hive语句
 ```
 通过application的AM的job界面左侧的configuration，搜索hive.query.string查询
+```
+12. 建orc表
+```
+CREATE EXTERNAL TABLE loan.applyloan_str_v2(
+id string,
+cell string,
+result string)
+PARTITIONED BY (
+  `datestr` string)
+STORED AS orc
+LOCATION
+  '/user/loan/applyloan_str_v2'
+TBLPROPERTIES ('orc.compress'='SNAPPY',
+'orc.bloom.filter.columns'='cell,id',
+'orc.bloom.filter.fpp'='0.05');
 ```
 
 ### 面试题
@@ -632,8 +605,166 @@ Text val = new Text();
 reader.get(_key, val);
 return val.toString();
 ```
-- 调优参数
+- backup stage
 ```
+map join为了防止local task失败导致整个sql查询失败，会自动启动common join作为备份方案，在map join失败时切换到common join方式产出结果
+https://cwiki.apache.org/confluence/display/Hive/MapJoinOptimization#MapJoinOptimization-2.3BackupTask
+```
+- hive常用参数配置
+```
+#设置
+set hive.vectorized.execution.enabled = true;
+#小文件合并
+set hive.hadoop.supports.splittable.combineinputformat=true;
+set hive.input.format=org.apache.hadoop.hive.ql.io.CombineHiveInputFormat;
+set mapreduce.input.fileinputformat.split.maxsize=2048000000;
+set mapreduce.input.fileinputformat.split.minsize.per.node=2048000000;
+set mapreduce.input.fileinputformat.split.minsize.per.rack=2048000000;
+#reduce任务处理的数据量
+set hive.exec.reducers.bytes.per.reducer=4096000000;
+#多个任务并发执行
+set hive.exec.parallel=true;
+// 同一个sql允许并行任务的最大线程数
+set hive.exec.parallel.thread.number=8;
+set hive.exec.submit.local.task.via.child=false;
+
+#触发合并的条件：
+#根据查询类型不同，相应的mapfiles/mapredfiles参数必须需要打开，即前两个参数根据场景必须有一个为true；
+#结果文件的平均大小需要小于avgsize参数的值。
+#合并过程：结果文件进行合并时会执行一个额外的map-only脚本，mapper的数量是文件总大小除以size.per.task参数所得的值。
+set hive.merge.mapfiles = true; # 在Map-only的任务结束时合并小文件(和下面的2选1)
+set hive.merge.mapredfiles = true; # 在Map-Reduce的任务结束时合并小文件(和上面的2选1)
+set hive.merge.size.per.task = 256000000; # 合并后每个文件的大小，默认256000000
+set hive.merge.smallfiles.avgsize=256000000; # 平均文件大小，是决定是否执行合并操作的阈值，默认16000000
+设置执行队列
+SET mapreduce.job.queuename=root.data;
+
+set hive.execution.engine=tez;
+set tez.queue.name=data;
+
+set hive.map.aggr=true|hive.groupby.mapaggr.checkinterval=100000 设置map端聚合
+set hive.groupby.skewindata=true 防止数据倾斜
+
+set hive.vectorized.execution.enabled = true;
+set hive.exec.submit.local.task.via.child=false; //设置是否为本地task map启动子进程
+set hive.exec.parallel=true;
+set hive.exec.parallel.thread.number=8; //设置mr并行度
+set  hive.auto.convert.join=true; //自动识别mapjoin
+set hive.mapjoin.smalltable.filesize=2500000; //小于设定值时使用mapjoin
+set hive.hadoop.supports.splittable.combineinputformat=true;
+set hive.map.aggr=true; //聚合优化
+set hive.groupby.mapaggr.checkinterval = 100000; //Map端进行聚合操作的条目数目
+set hive.groupby.skewindata=true; //数据倾斜的时候进行负载均衡
+set hive.merge.smallfiles.avgsize=256000000;
+set mapred.max.split.size=4096000000;
+set mapred.min.split.size.per.node=4096000000;
+set mapred.min.split.size.per.rack=4096000000;
+set hive.merge.mapfiles = true;
+set hive.merge.mapredfiles = true;
+set hive.merge.size.per.task = 256000000;
+set hive.merge.smallfiles.avgsize=256000000;
+set hive.exec.reducers.bytes.per.reducer=4096000000;
+set mapreduce.job.jvm.numtasks=8;
+set mapreduce.job.queuename=root.data;
+
+set hive.exec.mode.local.auto=true; //本地模式在单台机器上处理所有的任务
+set hive.exec.mode.local.auto.inputbytes.max=134217728;
+set hive.exec.mode.local.auto.input.files.max=4;
+set mapred.map.tasks.speculative.execution=true; //hadoop mapreduce控制推测执行的参数
+set mapred.reduce.tasks.speculative.execution=true;
+set hive.mapred.reduce.tasks.speculative.execution=true; //hive本身控制推测执行的参数
+
+set hive.fetch.task.conversion=more; //该属性修改为more以后，在全局查找、字段查找、limit查找等都不走mapreduce,none为走mr
+
+set hive.limit.optimize.enable=true; //将针对查询对元数据进行抽样
+set hive.limit.row.max.size=100000;
+set hive.limit.optimize.limit.file=10;
+
+set hive.exec.dynamic.partition=true;
+set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.exec.max.dynamic.partitions.pernode=10000;
+set hive.exec.max.dynamic.partitions=100000;
+set hive.exec.max.created.files=1000000;
+
+
+set hive.hadoop.supports.splittable.combineinputformat=true;
+set mapreduce.input.fileinputformat.split.minsize=128000000; -- files smaller than min size will be processed on the same mapper combined
+set mapreduce.input.fileinputformat.split.maxsize=2048000000; -- files bigger than max size will be splitted.
+set mapreduce.task.io.sort.mb=1024; -- 用于map输出排序的内存大小，默认100Mb，less than 2048
+set mapreduce.task.io.sort.factor=100;  -- 排序文件时，一次合并文件的最大值，和reduce共用
+set mapreduce.job.reduce.slowstart.completedmaps=0.5;	-- 默认0.05，当map task在执行到5%，开始执行reduce
+set mapred.job.reduce.input.buffer.percent=0.0;	-- reduce阶段内存中保存map输出的空间占整个堆空间的比例。如果reducer需要的内存较少，可以增加这个值来最小化访问磁盘的次数。
+set hive.optimize.distinct.rewrite=true;
+set hive.map.aggr=true; -- 控制在group by的时候是否map局部聚合,相当于Combiner
+set hive.groupby.mapaggr.checkinterval=100000;
+set hive.map.aggr.hash.min.reduction=0.5; -- 判断是否需要做map局部聚合，即：预先取100000条数据聚合，如果聚合后的条数/100000>0.5，则不再聚合
+--if files are ORC, check PPD:
+SET hive.optimize.ppd=true;
+SET hive.optimize.ppd.storage=true;
+
+
+# map 内存大小设置
+set mapreduce.map.memory.mb=4096;
+set mapreduce.map.java.opts=-Xmx3600m;
+# reduce 内存大小设置
+set mapreduce.reduce.memory.mb=5000;
+set mapreduce.reduce.java.opts=-Xmx3600m;
+# 设置hive 运行的 app 的 am container 内存大小
+set yarn.app.mapreduce.am.resource.mb=3000;
+# 设置 hive 运行的 app 的jvm 的内存大小
+set yarn.app.mapreduce.am.command-opts='-Xmx2048m';
+# 注意
+mapreduce.map.memory.mb > mapreduce.map.java.opts
+mapreduce.reduce.memory.mb >mapreduce.reduce.java.opts
+mapreduce.map.java.opts / mapreduce.map.memory.mb =0.70~0.80
+mapreduce.reduce.java.opts / mapreduce.reduce.memory.mb =0.70~0.80
+
+# hadoop2.x 设置reduce 的个数
+set mapreduce.job.reduces=10;
+
+set hive.exec.dynamic.partition=true;
+set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.exec.max.dynamic.partitions.pernode=10000;
+set hive.exec.max.dynamic.partitions=100000;
+set hive.exec.max.created.files=1000000;
+
+SET hive.optimize.sort.dynamic.partition=true; //将动态分区两阶段map转换为MapReduce，防止两阶段map第一阶段写文件（每个分区一个文件）导致datanode报错Xceiver count 8204 exceeds the limit of concurrent xcievers: 8192
+
+set mapreduce.job.maps=10;
+set hive.input.format=org.apache.hadoop.hive.ql.io.CombineHiveInputFormat;
+set hive.hadoop.supports.splittable.combineinputformat=true;
+set mapreduce.input.fileinputformat.split.minsize=2048000000;
+set mapreduce.input.fileinputformat.split.maxsize=2048000000;
+set hive.merge.mapfiles = true;  -- 设置map端输出进行合并，默认为true
+set hive.merge.mapredfiles=true;  -- 设置reduce端输出进行合并，默认为false
+set hive.merge.size.per.task = 256*1000*1000 -- 设置合并文件的大小
+set hive.merge.smallfiles.avgsize=16000000; -- 输出文件的平均大小小于该值时，启动一个独立的MapReduce任务进行文件merge
+
+set hive.exec.reducers.max=999 -- 每个任务最大的reduce数，默认为999
+set hive.exec.reducers.bytes.per.reducer=500000000; # 通过限制每个reduce 处理的数据量来控制reduce 的个数
+set mapreduce.job.reduces=15;
+
+set hive.groupby.skewindata=true; -- 启动两个MR Job完成，第一个Job先不按GroupBy字段分发，而是随机分发做一次聚合，然后启动第二个Job，拿前面聚合过的数据按GroupBy字段分发计算出最终结果
+set hive.optimize.skewjoin=true;
+set hive.skewjoin.key=100000; -- 超过hive.skewjoin.key（默认100000）阈值的key值先写入hdfs，然后再进行一个map join的job任务，最终和其他key值的结果合并为最终结果
+set hive.optimize.skewjoin.compiletime; //expalin 会显示是否做了倾斜处理
+set hive.auto.convert.join=true;
+set hive.mapjoin.smalltable.filesize=512000000; -- 默认值是25mb，小表小于25mb自动启动mapjoin
+
+参考 org.apache.hadoop.hive.conf.HiveConf
+hive.exec.orc.split.strategy 参数控制在读取ORC表时生成split的策略。BI策略以文件为粒度进行split划分；ETL策略会将文件进行切分，多个stripe组成一个split；HYBRID策略为：当文件的平均大小大于hadoop最大split值（默认256 * 1024 * 1024）时使用ETL策略，否则使用BI策略。
+对于一些较大的ORC表，可能其footer较大，ETL策略可能会导致其从hdfs拉取大量的数据来切分split，甚至会导致driver端OOM，因此这类表的读取建议使用BI策略。
+对于一些较小的尤其有数据倾斜的表（这里的数据倾斜指大量stripe存储于少数文件中），建议使用ETL策略
+设置hive日志级别
+hive --hiveconf hive.root.logger=DEBUG,console
+hive设置mr日志级别
+set mapreduce.map.log.level=DEBUG;
+
+analyze table t [partition p] compute statistics for [columns c,...];
+
+set hive.fetch.task.conversion=none;
+set hive.cli.print.current.db=true;
+set hive.cli.print.header=true;
 减少map数：
 set mapreduce.input.fileinputformat.split.minsize=256000000; #每个map最小的输入大小，用于合并小文件
 set mapreduce.input.fileinputformat.split.maxsize=256000000;  #每个Map最大输入大小，用于增加map数提高并发，防止Combine后变成一个map（旧版本：mapred.max.split.size）
@@ -667,8 +798,9 @@ set hive.merge.smallfiles.avgsize=16000000 #当输出文件的平均大小小于
 内存溢出
 map出现GC overhead limit exceeded，JVM花费了98%的时间进行垃圾回收，而只得到2%可用的内存，频繁的进行内存回收(最起码已经进行了5次连续的垃圾回收)，JVM就会曝出java.lang.OutOfMemoryError: GC overhead limit exceeded错误
 ```
-2、随机抽样
+2、数据抽样
 ```
+随机抽样
 select *
 from
     (  select * ,row_number() over(partition by file_id order by rand()) as rank
@@ -676,8 +808,23 @@ from
      ) a
 where rank<=10 ;
 
+SELECT * FROM <Table_Name> DISTRIBUTE BY RAND() SORT BY RAND()
+LIMIT <N rows to sample>;
 
 select *
 from  table a
 distribute by rand() sort by rand() limit 10 ;
+桶表抽样
+SELECT * FROM <Table_Name>
+TABLESAMPLE(BUCKET <specified bucket number to sample> OUT OF <total
+number of buckets> ON [colname|RAND()]) table_alias;
+块抽样
+SELECT *
+FROM <Table_Name> TABLESAMPLE(N PERCENT|ByteLengthLiteral|N ROWS) s;
+
+select name from ana  tablesample(10 percent) a;
+```
+3、数据倾斜
+```
+可以通过在日志查询是否包含hive table has rows for key判断是否数据倾斜，以及倾斜的key
 ```

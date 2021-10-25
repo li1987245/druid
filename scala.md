@@ -37,7 +37,7 @@ https://stackoverflow.com/questions/7409502/what-is-the-difference-between-def-f
 ```
 1、方法转函数
 def m1(x:Int):Int=x*10
-
+//函数 赋值给一个变量
 val func1=m1 _
 
 2、在集合中使用（表示集合中的每一个元素）
@@ -90,4 +90,5 @@ def curriedSum(x: Int)(y: Int) = x + y
 val add3 = curriedSum(3)_
 scala> add3(4)
 res2: Int = 7
+8、变长参数 def sum(args: Int*) val s = sum(1 to 5: _*)
 ```

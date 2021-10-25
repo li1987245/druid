@@ -84,11 +84,76 @@ r（读）w（写）x（可执行） 4+2+1
 /bin/sh 在centos上为/bin/bash的软链接，等同于 bash --posix
 在其他操作系统上则可能为其他shell实现
 ```
+- if
+```
+if [ command ];then
+   符合该条件执行的语句
+elif [ command ];then
+   符合该条件执行的语句
+else
+   符合该条件执行的语句
+fi
+
+文件/目录判断：
+[ -a FILE ] 如果 FILE 存在则为真。 
+[ -b FILE ] 如果 FILE 存在且是一个块文件则返回为真。
+[ -c FILE ] 如果 FILE 存在且是一个字符文件则返回为真。
+[ -d FILE ] 如果 FILE 存在且是一个目录则返回为真。 
+[ -e FILE ] 如果 指定的文件或目录存在时返回为真。
+[ -f FILE ] 如果 FILE 存在且是一个普通文件则返回为真。
+[ -g FILE ] 如果 FILE 存在且设置了SGID则返回为真。
+[ -h FILE ] 如果 FILE 存在且是一个符号符号链接文件则返回为真。（该选项在一些老系统上无效）
+[ -k FILE ] 如果 FILE 存在且已经设置了冒险位则返回为真。
+[ -p FILE ] 如果 FILE 存并且是命令管道时返回为真。
+[ -r FILE ] 如果 FILE 存在且是可读的则返回为真。
+[ -s FILE ] 如果 FILE 存在且大小非0时为真则返回为真。
+[ -u FILE ] 如果 FILE 存在且设置了SUID位时返回为真。
+[ -w FILE ] 如果 FILE 存在且是可写的则返回为真。（一个目录为了它的内容被访问必然是可执行的）
+[ -x FILE ] 如果 FILE 存在且是可执行的则返回为真。
+[ -O FILE ] 如果 FILE 存在且属有效用户ID则返回为真。
+[ -G FILE ] 如果 FILE 存在且默认组为当前组则返回为真。（只检查系统默认组）
+[ -L FILE ] 如果 FILE 存在且是一个符号连接则返回为真。 
+[ -N FILE ] 如果 FILE 存在 and has been mod如果ied since it was last read则返回为真。 
+[ -S FILE ] 如果 FILE 存在且是一个套接字则返回为真。
+[ FILE1 -nt FILE2 ] 如果 FILE1 比 FILE2 新, 或者 FILE1 存在但是 FILE2 不存在则返回为真。 
+[ FILE1 -ot FILE2 ] 如果 FILE1 比 FILE2 老, 或者 FILE2 存在但是 FILE1 不存在则返回为真。
+[ FILE1 -ef FILE2 ] 如果 FILE1 和 FILE2 指向相同的设备和节点号则返回为真。
+字符串判断
+[ -z STRING ]    如果STRING的长度为零则返回为真，即空是真
+[ -n STRING ]    如果STRING的长度非零则返回为真，即非空是真
+[ STRING1 ]　   如果字符串不为空则返回为真,与-n类似
+[ STRING1 == STRING2 ]   如果两个字符串相同则返回为真
+[ STRING1 != STRING2 ]    如果字符串不相同则返回为真
+[ STRING1 < STRING2 ]     如果 “STRING1”字典排序在“STRING2”前面则返回为真。 
+[ STRING1 > STRING2 ]     如果 “STRING1”字典排序在“STRING2”后面则返回为真。 
+数值判断
+[ INT1 -eq INT2 ]          INT1和INT2两数相等返回为真 ,=
+[ INT1 -ne INT2 ]          INT1和INT2两数不等返回为真 ,<>
+[ INT1 -gt INT2 ]           INT1大于INT2返回为真 ,>
+[ INT1 -ge INT2 ]          INT1大于等于INT2返回为真,>=
+[ INT1 -lt INT2 ]            INT1小于INT2返回为真 ,<
+[ INT1 -le INT2 ]           INT1小于等于INT2返回为真,<=
+逻辑判断
+[ ! EXPR ]       逻辑非，如果 EXPR 是false则返回为真。
+[ EXPR1 -a EXPR2 ]      逻辑与，如果 EXPR1 and EXPR2 全真则返回为真。
+[ EXPR1 -o EXPR2 ]      逻辑或，如果 EXPR1 或者 EXPR2 为真则返回为真。
+[  ] || [  ]           用OR来合并两个条件
+[  ] && [  ]        用AND来合并两个条件
+其他判断
+[ -t FD ]  如果文件描述符 FD （默认值为1）打开且指向一个终端则返回为真
+[ -o optionname ]  如果shell选项optionname开启则返回为真
+注意：变量取值STRINGx 最好放在""内；
+```
 - source
 ```
 source filename [arguments]
 filename里面不包括/，那么source会从PATH路径里搜索文件，当bash不在posix模式才会搜索当前目录
 Read and execute commands from filename in the current shell environment and return the exit status of the last command exe-cuted from filename. If filename does not contain a slash, file names in PATH are used to find the directory containing file-name. The file searched for in PATH need not be executable. When bash is not in posix mode, the current directory is searched if no file is found in PATH. If the source path option to the shopt builtin command is turned off, the PATH is not searched. If any arguments are supplied, they become the positional parameters when filename is executed. Otherwise the positional parameters are unchanged. The return status is the status of the last command exited within the script (0 if no commands are executed), and false if filename is not found or cannot be read.
+```
+
+- shellcheck
+```
+shell脚本审查
 ```
 
 - 常用命令
@@ -139,6 +204,20 @@ df -h 或查看挂载情况
 ```
 mount -t nfs m163p113:/nfs/kwtest /home/jovyan/kwtest
 ```
+- 内核及系统日志
+```
+由系统服务rsyslog管理，根据去主配置文件/etc/rsyslog.conf中的设置决定将内核消息及各种系统程序消息记录到什么位置。
+/etc/rsyslog.conf配置文件中，常见的配置格式：
+“.” 你后面等级要高（包含该等级）的都记录 eg：“*.info”
+“.=” 只记录该等级 eg：“.=debug”
+“!” 除了该等级都记录 eg:“!info”
+“-” 当有记录信息需要记录时，现存到缓存中，到一定大小时一次性写入，以减少对磁盘读写性能的占用。 eg:“-/var/log/maillog”
+
+```
+- docker 日志查看
+```
+sudo journalctl -fu docker.service
+```
 - docker overlay和shm无法删除，设备或资源忙
 ```
 cat /proc/mounts |grep "docker"
@@ -146,7 +225,8 @@ umount /opt/docker/overlay2/03784e282684fb4947e4732e990a7b6615d320e5f6a60b3fa933
 ```
 - 火焰图
 ```
-sudo apt install linux-tools-common linux-tools-4.15.0-135-generic -y
+sudo apt install linux-tools-common linux-tools-4.15.0-135-generic -y #ununtu
+sudo yum install perf # centos
 git clone https://github.com/brendangregg/FlameGraph
 sudo perf record -F 99 -p 2968 -g -- sleep 30 #perf record 表示采集系统事件, 没有使用 -e 指定采集事件, 则默认采集 cycles(即 CPU clock 周期), -F 99 表示每秒 99 次,
                                                 -p 13204 是进程号, 即对哪个进程进行分析, -g 表示记录调用栈, sleep 30 则是持续 30 秒. 在当前路径生成perf.data文件
@@ -156,6 +236,15 @@ sudo perf script | FlameGraph/stackcollapse-perf.pl| FlameGraph/flamegraph.pl > 
 sudo perf record -F 99 -a -- sleep 30; ./jmaps #jmaps脚本的作用是获取java程序运行时的符号表,该脚本依赖git项目 https://github.com/jvm-profiling-tools/perf-map-agent，打开jmaps文件，可以看到如下代码：
                                                 AGENT_HOME=${AGENT_HOME:-/usr/lib/jvm/perf-map-agent} # from https://github.com/jvm-profiling-tools/perf-map-agent，需要手动将AGENT_HOME替换为刚才编译后的per-map-agent/out/目录。
 sudo perf script | FlameGraph/stackcollapse-perf.pl | grep java | FlameGraph/flamegraph.pl > process.svg # 生成火焰图
+
+#1.  记录数据：
+perf record -g -a -p $pid
+#2. 用perf script工具进行解析数据
+perf script -i perf.data > perf.unfold
+#3. 将perf.unfold中的符号进行折叠，脚本上面网站下载
+FlameGraph/stackcollapse-perf.pl perf.unfold  > perf.folded
+#4、最后生成svg图，脚本上面网站下载
+FlameGraph/flamegraph.pl perf.folded > perf.svg
 ```
 - 提高监听的文件数量
 ```

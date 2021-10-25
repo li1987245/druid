@@ -301,6 +301,13 @@ helm  search  repo  nginx
 ```
 helm upgrade hello-world  /kubernetes/helm/hello-world
 ```
+- helm rollback
+```
+Error: UPGRADE FAILED: another operation (install/upgrade/rollback) is in progress
+helm history -n jhub jhub
+helm rollback -n jhub jhub 11
+sh start.sh
+```
 
 #### docker
 卸载已安装版本

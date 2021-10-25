@@ -19,6 +19,7 @@ conda clean -i #清除conda缓存
 conda create -n tensorflow python=3.5
 activate tensorflow
 pip install --ignore-installed --upgrade https://storage.googleapis.com/tensorflow/windows/cpu/tensorflow-0.12.0-cp35-cp35m-win_amd64.whl
+python3 -m twine upload --repository-url http://192.168.162.124:8081/repository/mypypi-hosted/ ./*.tar.gz
 python setup.py bdist_wheel
 //linux
 conda create -n pyspark python=3.6 ipython pyspark jupyter
@@ -88,6 +89,13 @@ print os.path.abspath(os.path.join(os.getcwd(), ".."))
 
 print '***获取上上级目录***'
 print os.path.abspath(os.path.join(os.getcwd(), "../.."))
+
+def add(x:int, y:int) -> int:
+    return x + y
+用 : 类型 的形式指定函数的参数类型，用 -> 类型 的形式指定函数的返回值类型
+
+from __future__ import print_function
+
 ```
 
 ### numpy
@@ -147,7 +155,13 @@ print os.path.abspath(os.path.join(os.getcwd(), "../.."))
 2. [i if condition else exp for exp]：此时if...else被用来赋值，满足条件的i以及else被用来生成最终的列表。
 
 ```
-
+- venv
+```markdown
+python3 -m venv xxx
+source xxx/bin/activate
+pip install ipykernel
+python3 -m ipykernel install --user --name xxx --display-name xxx
+```
 
 
 - conda && pip
@@ -204,7 +218,7 @@ python -m pip install --upgrade pip
 pip config list
 pip config list --[user|global] # 列出用户|全局的设置
 pip config get global.index-url # 得到这key对应的value 如：https://mirrors.aliyun.com/pypi/simple/
-
+pip install modin[ray]==0.10.1 --no-dependencies #排除依赖
 conda config --set ssl_verify False
 npm config set registry https://registry.company.com/
 yarn config set registry https://registry.company.com/
@@ -247,6 +261,101 @@ pip wheel -w DIR -r requirements.txt
 pip wheel -r requirements.txt --wheel-dir=./tmp/wheels
 pip install --no-index --find-links=path/tmp/wheels -r requirements.txt
 ```
+### web http server
+1、 Gunicorn
+- 安装
+pip install gunicorn
+- flask部署
+编写gunicorn_demo.py
+```
+from flask import Flask
+app = Flask(__name__)
+@app.route('/demo', methods=['GET'])
+def demo():
+    return "gunicorn and flask demo."
+```
+gunicorn运行提供服务
+```
+gunicorn -w 2 -b 0.0.0.0:8000 gunicorn_demo:app
+-w:指定fork的worker进程数
+-b:指定绑定的端口
+gunicorn_demo:模块名,python文件名
+或使用配置文件gunicorn -c gunicorn.conf.py
+```
+supervisor+nginx部署提供服务
+编写supervisor_gunicorn.conf
+```
+[program:gunicorn_demo]
+process_name=%(program_name)s
+numprocs=1
+priority=901
+directory = /opt/gunicorn_demo/
+command = /opt/virtualenv/bin/python /opt/virtualenv/bin/gunicorn -c gunicorn.conf.py gunicorn_demo:app
+autostart = true
+startsecs = 20
+autorestart = true
+startretries = 3
+user = root
+redirect_stderr = true
+stdout_logfile_maxbytes = 20MB
+stdout_logfile_backups = 10
+stdout_logfile = /dev/null
+```
+gunicorn.conf.py
+```
+import multiprocessing
+
+chdir = ~/ #在app加载之前，进入到此目录
+bind = '0.0.0.0:8000' #绑定ip和端口号
+workers = multiprocessing.cpu_count() * 2 + 1 #进程数
+threads = 2 #指定每个进程开启的线程数
+backlog = 2048 #监听队列
+timeout = 30      #超时
+worker_class = "gevent" #使用gevent模式，还可以使用sync 模式，默认的是sync模式
+worker_connections = 1000
+reload = True
+daemon = False
+proc_name = 'gunicorn_demo'
+loglever = 'info' #日志级别，这个日志级别指的是错误日志的级别，而访问日志的级别无法设置
+access_log_format = '%(t)s %(p)s %(h)s "%(r)s" %(s)s %(L)s %(b)s %(f)s" "%(a)s"'    #设置gunicorn访问日志格式，错误日志无法设置
+pidfile = './log/gunicorn.pid'
+accesslog = "./log/gunicorn_access.log"      #访问日志文件
+errorlog = "./log/gunicorn_error.log"        #错误日志文件
+```
+nginx.conf
+```
+server {
+    listen 80;
+    server_name sam_rui.com;
+    access_log  /var/log/nginx/access.log;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+### 性能监控
+- py-spy
+pip install py-spy
+1、使用py-spy 生成火焰图
+```
+py-spy record -o profile.svg --pid 12345
+```
+2、Top功能
+```
+py-spy top --pid 12345
+  1按％Own排序（当前在该函数中花费的时间的百分比）
+  2按％Total排序（函数及其子级中当前的时间百分比）
+  3按OwnTime排序（函数中花费的总时间）
+  4按TotalTime排序（该函数及其子项花费的总时间）
+```
+- Scalene 高性能 CPU，GPU和内存分析器
+pip install -U scalene
+
+
 
 ### tornado
 1、 解决Python Tornado的某个页面不需要进行xsrf的检查
@@ -288,5 +397,17 @@ conda install --channel https://conda.anaconda.org/Winand celery
 找到文件pywin32_postinstall.py的路径，env对应Scripts下
 执行python pywin32_postinstall.py -install
 ```
+4、jupyter keep output
+jupyter nbconvert --to notebook --execute Untitled.ipynb --output ./myfile.ipynb
 
+%%capture cap --no-stderr
+for i in range(1,5):
+  test(i)
+with open('output.txt', 'w') as f:
+  f.write(cap.stdout)
+5、redis.exceptions.ConnectionError: Connection closed by server.
+```markdown
+ERROR:rediscluster.client:MovedError
+redis有机制，超过一定时间没有命令过来，就会关闭连接。在redis的timeout 配置，一般是300s
 
+```

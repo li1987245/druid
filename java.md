@@ -370,9 +370,18 @@ Environment env =configurableApplicationContext.getEnvironment()
 
 #### 连接池
 ##### druid
+1、打印druid配置信息
 ```
-打印druid配置信息
 java -cp "./druid-1.0.14.jar:$JAVA_HOME/lib/tools.jar" com.alibaba.druid.support.console.DruidStat -ds -detail 13813
 ```
-
+2、连接泄漏监测
+```
+RemoveAbandanded相关配置，用来关闭长时间不使用的连接
+# 开启连接池回收
+spring.datasource.druid.remove-abandoned=true
+# 超时连接回收时间，单位秒
+spring.datasource.druid.remove-abandoned-timeout=120
+# 回收连接时打印日志
+spring.datasource.druid.log-abandoned=true
+```
 httpclient请求池每个请求最多复用100次

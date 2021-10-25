@@ -15,7 +15,7 @@ conda install --use-local jupyterlab-2.2.9-py_0.tar.bz2
 - jupyter lab 配置
 ```
 jupyter notebook --generate-config
-vim /root/.jupyter/jupyter_notebook_config.py
+vim /root/.jupyter/jupyter_notebook_config.py # ~/.jupyter/jupyter_notebook_config.py /etc/jupyter/jupyter_notebook_config.py的配置项都会读取，优先读取发生变化的，如果两边都有修改，home下的优先级更高
 c.NotebookApp.ip='*'
 c.NotebookApp.password = u'sha:ce...刚才复制的那个密文'
 c.NotebookApp.open_browser = False
@@ -25,6 +25,9 @@ c.NotebookApp.port =8888 #可自行指定一个端口, 访问时使用该端口
 ```
 jupyter kernelspec list
 jupyter kernelspec remove kernelname
+pip install ipykernel
+python3 -m ipykernel install --user --name xxx --display-name xxx
+jupyter console --existing kernel-21312.json
 ```
 - jupyter lab 插件
 ```
@@ -67,6 +70,10 @@ c.JupyterHub.hub_bind_url = 'http://0.0.0.0:8000'
 c.JupyterHub.authenticator_class = 'nativeauthenticator.NativeAuthenticator'
 
 ```
+- 设置ipython日志级别
+```markdown
+%config NotebookApp.log_level='DEBUG'
+```
 - 启动jupyterhub
 ```
 sudo jupyterhub -f /etc/jupyterhub/jupyterhub_config.py #allow multiple users to sign in
@@ -87,6 +94,14 @@ conda install -c conda-forge mysql-connector-python
 - 常用命令
 ```
 %lsmagic
+%%writefile test.py
+%run test.py
+```
+- mito
+```markdown
+Mito 是一个免费的 JupyterLab 扩展程序，可以使用 Excel 轻松探索和转换数据集。
+https://jishuin.proginn.com/p/763bfbd67148
+https://docs.trymito.io/getting-started/installing-mito
 ```
 
 - jupyterlab 导出
@@ -111,8 +126,10 @@ sudo yum update
 sudo yum install R -y
 R
 install.packages("devtools")
+install_version(包名, version = 版本,repos = "http://cran.us.r-project.org") #指定版本安装
 devtools::install_github('IRkernel/IRkernel')
 IRkernel::installspec(name = 'ir36-common', displayname = 'R 3.6-common')
+library(caret) #验证包是否安装
 q()
 ```
 - 配置文件
@@ -184,4 +201,8 @@ pip uninstall pyzmq
 删除D:\tool\Anaconda3\Lib\site-packages\zmq文件夹
 重新安装pyzmq
 pip install pyzmq
+```
+3、'ExtensionManager' object has no attribute '_extensions'
+```
+nbclassic版本兼容问题
 ```

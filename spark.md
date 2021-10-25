@@ -191,6 +191,17 @@ csv:
 from pyspark.sql import SparkSession
 spark = SparkSession.builder.appName('sql').getOrCreate()
 df = spark.read.csv('hdfs://localhost:9000/tmp/tpcds-generate/2/web_page/data-m-00001',sep='|')
+//打印RDD详情
+df.rdd.toDebugString
+import spark.implicits._
+import org.apache.spark.sql.functions._
+//1%抽样
+val tmpDF = dfs.get(0).sample(withReplacement = false, 0.01)
+//使用一备份的内存和磁盘缓存
+tmpDF.persist(StorageLevel.MEMORY_AND_DISK)
+logger.warn("xxx:{}",tmpDF.count())
+tmpDF.groupBy("id", "cell").agg(count("cell").alias("count")).where(column("count")>100).sort($"count".desc).show(false)
+tmpDF.unpersist()
 ```
 - RDD
 ```markdown
@@ -244,9 +255,31 @@ df.join(df1,df._c0==df1._c11,'outer').count()
 ```
 - 统计
 ```markdown
+import org.apache.spark.sql.functions._
 df.groupby('_c2').agg({"_c2":"count"}).collect()
 df.groupby('_c2').agg(F.countDistinct('_c2')).collect()#分组去重统计
 df.groupBy('_c2').count().collect()#分组统计简写
+```
+- broadcast
+```
+val broadcastVar = sc.broadcast(Array(1, 2, 3))
+broadcastVar.value
+```
+- accumulator
+```
+val accum = sc.longAccumulator(“My Accumulator”)
+sc.parallelize(Array(1, 2, 3, 4)).foreach(x => accum.add(x))
+accum.value
+```
+- parallelism
+```
+--conf spark.sql.shuffle.partitions=2000
+spark.conf.set("spark.sql.shuffle.partitions",2000)
+```
+- repartition
+```
+Repartition: Gives equal number of partitions with high shuffling
+Coalesce: Generally reduces the number of partitions with less shuffling.
 ```
 - sql
 ```markdown
@@ -385,71 +418,6 @@ lines.transform在driver端执行rdd.map在executor执行
 
 ```
 
-
-### 问题
-```markdown
-1.RDD或DataFrame使用foreach打印，在2.7环境
-In [18]: textfile.foreach(print)
-SyntaxError: invalid syntax
-解决方案：from __future__ import print_function
-2. Neither spark.yarn.jars nor spark.yarn.archive is set, falling back to uploading libraries under SPARK_HOME
-To make Spark runtime jars accessible from YARN side, you can specify spark.yarn.archive or spark.yarn.jars. 
-For details please refer to Spark Properties. If neither spark.yarn.archive nor spark.yarn.jars is specified, 
-Spark will create a zip file with all jars under $SPARK_HOME/jars and upload it to the distributed cache.
-hadoop fs -mkdir -p hdfs:///tmp/spark/lib_jars/
-hadoop fs -put  $SPARK_HOME/jars/* hdfs:///tmp/spark/lib_jars/
-vim $SPARK_HOME/conf/spark-defaults.conf
-添加spark.yarn.jars hdfs:///tmp/spark/lib_jars/*.jar
-3. executor-memory计算
-val executorMem = args.executorMemory + executorMemoryOverhead
-executorMem= X+max(X*0.1,384) X为--executor-memory指定值
-4. Exit code: 13 Error file: prelaunch.err
-一般情况在Error file: prelaunch.err后面会跟着具体的错误原因，但是当driver-memory和executor-memory过小时，会导致AM启动不了，导致无具体错误原因
-5. org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl: application_1548991065083_2977 State change from FINAL_SAVING to FAILED
-nodemanage日志Exception from container-launch with container ID: container_1548991065083_2977_01_000001 and exit code: 1
-yarn logs -applicationId application_1548991065083_2977 查看yarn日志，分析具体原因
-ln -snf /opt/jdk1.8.0_181/ /opt/java
-6. yarn指定队列不生效
-Fair调度器采用了一套基于规则的系统来确定应用应该放到哪个队列。在上面的例子中，<queuePlacementPolicy> 元素定义了一个规则列表，其中的每个规则会被逐个尝试直到匹配成功。例如，上例第一个规则specified，则会把应用放到它指定的队列中，若这个应用没有指定队列名或队列名不存在，则说明不匹配这个规则，然后尝试下一个规则。primaryGroup规则会尝试把应用放在以用户所在的Unix组名命名的队列中，如果没有这个队列，不创建队列转而尝试下一个规则。当前面所有规则不满足时，则触发default规则，把应用放在dev.eng队列中。
-
-当然，我们可以不配置queuePlacementPolicy规则，调度器则默认采用如下规则：
-
-<queuePlacementPolicy>
-<rule name="specified" />
-<rule name="user" />
-</queuePlacementPolicy>
-7.The root scratch dir: /tmp/hive on HDFS should be writable. Current permissions are: ---------;
-D:\winutils\bin\winutils.exe chmod 777 D:\tmp\hive
-winutils.exe的安装盘下会有\tmp\hive，前提是指定了HADOOP_HOME
-8.driver端定义变量对应类未实现Serializable，使用KryoSerializer序列化且注册类，同样报错Task not serializable: java.io.NotSerializableException:
-spark.serializer默认为org.apache.spark.serializer.JavaSerializer, 可选 org.apache.spark.serializer.KryoSerializer, 实际上只要是org.apache.spark.serializer的子类就可以了,不过如果只是应用,大概你不会自己去实现一个的。
-序列化对于spark应用的性能来说,还是有很大影响的,在特定的数据格式的情况下,KryoSerializer的性能可以达到JavaSerializer的10倍以上,当然放到整个Spark程序中来考量,比重就没有那么大了,但是以Wordcount为例，通常也很容易达到30%以上的性能提升。而对于一些Int之类的基本类型数据，性能的提升就几乎可以忽略了。KryoSerializer依赖Twitter的Chill库来实现，相对于JavaSerializer，主要的问题在于不是所有的Java Serializable对象都能支持。
-需要注意的是，这里可配的Serializer针对的对象是Shuffle数据，以及RDD Cache等场合，而Spark Task的序列化是通过spark.closure.serializer来配置，但是目前只支持JavaSerializer，所以等于没法配置啦。
-9.broadcast NullPointerException
-broadcast需要在driver端实例化在executor通过broadcast.value使用，即需要显示传递给executor
-10. Caused by: java.lang.IllegalArgumentException: Wrong FS: hdfs://brcluster/user/loan/batch_process_result/.hive-staging_hive_2020-10-15_20-28-46_793_8703393745638456305-1/-ext-10000/part-00000-1b24b5af-4db9-4d76-8342-ffe329cd985b-c000, expected: hdfs://m20p13
-Hadoop配置文件core-site.xml中的fs.defaultFS 和hive配置文件hive-sit.xml中的hive.metastore.warehouse.dir和spark配置中的spark.sql.warehouse.dir不一致导致
-11. java.lang.NoSuchMethodError: org.json4s.JsonDSL$.seq2jvalue(Lscala/collection/Traversable;Lscala/Function1;)Lorg/json4s/JsonAST$JArray
-spark2.4.6使用json4j 3.5.3
-```
--
-```java引用scala类提示，程序包com.br.rule.broadcast不存在
-mvn clean scala:compile compile package -P dev -pl field-monitor-common,field-monitor-rule-engine,field-monitor-realTime
-mvn clean package -pl data-insight-analysis -am -Dmaven.test.skip=true -e -U
-参数	全称	释义	说明
--pl	--projects	Build specified reactor projects instead of all projects
-选项后可跟随{groupId}:{artifactId}或者所选模块的相对路径(多个模块以逗号分隔)
--am	--also-make	If project list is specified, also build projects required by the list
-表示同时处理选定模块所依赖的模块
--amd	--also-make-dependents	If project list is specified, also build projects that depend on projects on the list
-表示同时处理依赖选定模块的模块
--N	--Non-recursive	Build projects without recursive
-表示不递归子模块
--rf	--resume-from	Resume reactor from specified project
-表示从指定模块开始继续处理
-```
-
-
 - Performance Tuning
 ```markdown
 Caching Data In Memory
@@ -539,7 +507,14 @@ sparkConf.set("mapreduce.input.fileinputformat.split.maxsize", "67108864")
 val sc = new SparkContext(sparkConf)
 //sc.hadoopConfiguration.set("mapreduce.input.fileinputformat.split.maxsize","67108864")
 val lines = sc.newAPIHadoopFile("/user/jinwei.li/test1/dt=20190805",classOf[CombineTextInputFormat],classOf[LongWritable],classOf[Text])
-
+```
+- persist
+```
+1、persist() + show()不能缓存全部数据
+只会把包含show数据的分区缓存起来
+2、unpersist()一个rdd时会同时unpersist()子RDD
+A->B->C，unpersist A时，会导致B、C的缓存失效
+```
 spark-sql:
 
 spark sql读取hive：
@@ -865,4 +840,178 @@ spark.yarn.security.credentials.hiveserver2.enabled	false	When true, HiveServer2
 Overview > Actions > The Histogram (查看堆栈中java类对象[Objects]个数、[Shallow Heap]individual objects此类对象占用大小、[Retained Heap]关联对象占用大小)
 List objects  or Show objects by class： [with incoming references 列出哪些类引入该类；with outgoing references 出该类引用了哪些类]
 Actions > dominator_tree (查看堆中内存占用最高的对象的线程调用堆栈) -> 对象调用堆栈树-查找内存占用最高对象(Retained Heap倒叙排序) ->  Paths to GC Roots -> exclude all phantom/weak/soft etc.reference (排除所有虚弱软引用) -查找GC Root线程 -> 查找未释放的内存占用最高的代码逻辑段(很可能是产生内存溢出代码)
+```
+
+### FAQ
+1、Exit code is 143 Container exited with a non-zero exit code 143 Killed by external signal
+```
+This exception is come from YarnAllocator, and it’s very annoying, because Yarn don’t give Spark any information about why container exit exceptionally. Most of case it cause by the memory issue. The JVM running in side of Container has just been killed. You have to dig into the Yarn logs with container Id to found out the full exception stack trace. And when this happen, you have at least one task failed, your Spark job will be aborted.
+需要查看task详细日志
+1、failed to allocate a page
+增加gc日志--conf "spark.executor.extraJavaOptions= -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps"查看gc情况
+增大driver的内存
+2、OutOfMemoryError:java heap space
+3、java.lang.outofmemoryerror java heap space failed reallocation of scalar replaced objects
+4.Container killed by YARN for exceeding memory limits. 1.8 GB of 1.8 GB physical memory used. Consider boosting spark.yarn.executor.memoryOverhead.
+调大spark.executor.memoryOverhead堆外内存 --conf spark.executor.memoryOverhead=2048
+```
+2、No implicit arguments of type: Encoder[(String, (String, String))]
+```
+import spark.implicits._
+或自定义Encoder
+implicit val mapc = Encoders.kryo[(String,(String,String))]
+```
+3、No more replicas available for rdd_
+```
+超过spark.task.maxFailures最大失败次数，job会失败
+增大executor的内存
+```
+4、ERROR TaskSetManager: Total size of serialized results of 30 tasks (1108.5 MB) is bigger than spark.driver.maxResultSize (1024.0 MB)
+```
+--conf spark.driver.maxResultSize=2G
+```
+5、Dropping event from queue eventLog
+```
+增大spark.scheduler.listenerbus.eventqueue.capacity(默认为10000)
+--conf spark.scheduler.listenerbus.eventqueue.capacity=100000
+```
+6. Neither spark.yarn.jars nor spark.yarn.archive is set, falling back to uploading libraries under SPARK_HOME
+```
+To make Spark runtime jars accessible from YARN side, you can specify spark.yarn.archive or spark.yarn.jars.
+For details please refer to Spark Properties. If neither spark.yarn.archive nor spark.yarn.jars is specified,
+Spark will create a zip file with all jars under $SPARK_HOME/jars and upload it to the distributed cache.
+hadoop fs -mkdir -p hdfs:///tmp/spark/lib_jars/
+hadoop fs -put  $SPARK_HOME/jars/* hdfs:///tmp/spark/lib_jars/
+vim $SPARK_HOME/conf/spark-defaults.conf
+添加spark.yarn.jars hdfs:///tmp/spark/lib_jars/*.jar
+```
+7. executor-memory计算
+```
+val executorMem = args.executorMemory + executorMemoryOverhead
+executorMem= X+max(X*0.1,384) X为--executor-memory指定值
+```
+8. Exit code: 13 Error file: prelaunch.err
+```
+一般情况在Error file: prelaunch.err后面会跟着具体的错误原因，但是当driver-memory和executor-memory过小时，会导致AM启动不了，导致无具体错误原因
+```
+9. org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl: application_1548991065083_2977 State change from FINAL_SAVING to FAILED
+```
+nodemanage日志Exception from container-launch with container ID: container_1548991065083_2977_01_000001 and exit code: 1
+yarn logs -applicationId application_1548991065083_2977 查看yarn日志，分析具体原因
+ln -snf /opt/jdk1.8.0_181/ /opt/java
+```
+10. yarn指定队列不生效
+```
+Fair调度器采用了一套基于规则的系统来确定应用应该放到哪个队列。在上面的例子中，<queuePlacementPolicy> 元素定义了一个规则列表，其中的每个规则会被逐个尝试直到匹配成功。例如，上例第一个规则specified，则会把应用放到它指定的队列中，若这个应用没有指定队列名或队列名不存在，则说明不匹配这个规则，然后尝试下一个规则。primaryGroup规则会尝试把应用放在以用户所在的Unix组名命名的队列中，如果没有这个队列，不创建队列转而尝试下一个规则。当前面所有规则不满足时，则触发default规则，把应用放在dev.eng队列中。
+当然，我们可以不配置queuePlacementPolicy规则，调度器则默认采用如下规则：
+<queuePlacementPolicy>
+<rule name="specified" />
+<rule name="user" />
+</queuePlacementPolicy>
+```
+11. The root scratch dir: /tmp/hive on HDFS should be writable. Current permissions are: ---------;
+```
+D:\winutils\bin\winutils.exe chmod 777 D:\tmp\hive
+winutils.exe的安装盘下会有\tmp\hive，前提是指定了HADOOP_HOME
+```
+12.driver端定义变量对应类未实现Serializable，使用KryoSerializer序列化且注册类，同样报错Task not serializable: java.io.NotSerializableException:
+```
+spark.serializer默认为org.apache.spark.serializer.JavaSerializer, 可选 org.apache.spark.serializer.KryoSerializer, 实际上只要是org.apache.spark.serializer的子类就可以了,不过如果只是应用,大概你不会自己去实现一个的。
+序列化对于spark应用的性能来说,还是有很大影响的,在特定的数据格式的情况下,KryoSerializer的性能可以达到JavaSerializer的10倍以上,当然放到整个Spark程序中来考量,比重就没有那么大了,但是以Wordcount为例，通常也很容易达到30%以上的性能提升。而对于一些Int之类的基本类型数据，性能的提升就几乎可以忽略了。KryoSerializer依赖Twitter的Chill库来实现，相对于JavaSerializer，主要的问题在于不是所有的Java Serializable对象都能支持。
+需要注意的是，这里可配的Serializer针对的对象是Shuffle数据，以及RDD Cache等场合，而Spark Task的序列化是通过spark.closure.serializer来配置，但是目前只支持JavaSerializer，所以等于没法配置啦。
+```
+13.broadcast NullPointerException
+```
+broadcast需要在driver端实例化在executor通过broadcast.value使用，即需要显示传递给executor
+```
+14. Caused by: java.lang.IllegalArgumentException: Wrong FS: hdfs://brcluster/user/loan/batch_process_result/.hive-staging_hive_2020-10-15_20-28-46_793_8703393745638456305-1/-ext-10000/part-00000-1b24b5af-4db9-4d76-8342-ffe329cd985b-c000, expected: hdfs://m20p13
+```
+Hadoop配置文件core-site.xml中的fs.defaultFS 和hive配置文件hive-sit.xml中的hive.metastore.warehouse.dir和spark配置中的spark.sql.warehouse.dir不一致导致
+```
+15. java.lang.NoSuchMethodError: org.json4s.JsonDSL$.seq2jvalue(Lscala/collection/Traversable;Lscala/Function1;)Lorg/json4s/JsonAST$JArray
+```
+spark2.4.6使用json4j 3.5.3
+```
+16. java引用scala类提示，程序包com.br.rule.broadcast不存在
+```
+mvn clean scala:compile compile package -P dev -pl field-monitor-common,field-monitor-rule-engine,field-monitor-realTime
+mvn clean package -pl data-insight-analysis -am -Dmaven.test.skip=true -e -U
+参数	全称	释义	说明
+-pl	--projects	Build specified reactor projects instead of all projects
+选项后可跟随{groupId}:{artifactId}或者所选模块的相对路径(多个模块以逗号分隔)
+-am	--also-make	If project list is specified, also build projects required by the list
+表示同时处理选定模块所依赖的模块
+-amd	--also-make-dependents	If project list is specified, also build projects that depend on projects on the list
+表示同时处理依赖选定模块的模块
+-N	--Non-recursive	Build projects without recursive
+表示不递归子模块
+-rf	--resume-from	Resume reactor from specified project
+表示从指定模块开始继续处理
+```
+17、设置序列化器为KryoSerializer
+```
+val conf = new SparkConf().setMaster(…).setAppName(…)
+conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+conf.registerKryoClasses(Array(classOf[MyClass1], classOf[MyClass2]))
+```
+18、mapPartition为并行执行
+```
+val rdd = spark.sparkContext.parallelize(Array(1,2,3,4,5,6),2)
+println(rdd.getNumPartitions)
+import org.apache.spark.TaskContext
+
+rdd.mapPartitions(its=>{
+//      for (elem <- its if (elem%2 = 0)) yield elem
+  var arr = ArrayBuffer[Int]()
+  //map操作时惰性加载，所以如果不进行action算子触发，会导致arr为空
+  its.foreach(elem=>{
+    println(s"分区信息${TaskContext.getPartitionId}")
+    Thread.sleep(new Random().nextInt(10000))
+    arr += elem
+  })
+  arr.iterator
+}).foreachPartition(its=>{
+  println(s"打印分区信息${TaskContext.getPartitionId}")
+  its.foreach(println)
+})
+
+分区信息1
+分区信息0
+分区信息0
+分区信息1
+分区信息1
+分区信息0
+打印分区信息1
+4
+5
+6
+打印分区信息0
+1
+2
+3
+```
+19、pyspark
+```
+1.Python worker failed to connect back.
+设置环境变量 PYSPARK_PYTHON=python
+os.environ['PYSPARK_PYTHON']="python"
+2.TypeError: an integer is required (got type bytes)
+This is happening because you're using python 3.8. The latest pip release of pyspark (pyspark 2.4.4 at time of writing) doesn't support python 3.8. Downgrade to python 3.7
+3.Can not merge type <class 'pyspark.sql.types.LongType'> and <class 'pyspark.sql.types.StringType'>
+提前指定pandas类型或指定转换的schema
+df_500['cell']= df_500['cell'].astype(str)
+s_df_500 = spark.createDataFrame(df_500,schema=schema)
+4.createDataFrame attempted Arrow optimization because 'spark.sql.execution.arrow.enabled' is set to true; however, failed by the reason below:
+  Did not pass numpy.dtype object
+the issue you are facing originates from the fact that you are using an old pyarrow wheel with the latest numpy 1.20 release.
+numpy 1.20版本进行了类型变更，str被object替换
+pyarrow 0.15.0 that makes the default behavior of pyarrow incompatible with older versions of Arrow in Java
+pyarrow在0.15.0进行版本升级导致旧版本不兼容，需要设置环境变量ARROW_PRE_0_15_IPC_FORMAT=1
+5.pycharm functions.col/functions.count 提示引包失败
+安装对应版本的pyspark-stubs pip install pyspark-stubs==2.4.0.post10
+```
+20、执行计划
+```
+ANALYZE TABLE table_name COMPUTE STATISTICS FOR COLUMNS [column1] [,column2] [,column3] [,column4] ... [,columnn];
+desc extended table_name [column];
 ```
