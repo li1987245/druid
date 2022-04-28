@@ -48,3 +48,4 @@ req_v_cnt,req_v_user,res_v_cnt,res_v_user,fee_cnt,fee_req,cost_req,income_req,co
 # df.describe().show()
 req_users = df.rdd.map(lambda p:p.req_v_user).collect()
 plt.hist(req_users,bins=20,normed=True)
+import pyspark.ml.feature

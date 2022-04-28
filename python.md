@@ -20,7 +20,9 @@ conda create -n tensorflow python=3.5
 activate tensorflow
 pip install --ignore-installed --upgrade https://storage.googleapis.com/tensorflow/windows/cpu/tensorflow-0.12.0-cp35-cp35m-win_amd64.whl
 python3 -m twine upload --repository-url http://192.168.162.124:8081/repository/mypypi-hosted/ ./*.tar.gz
+pip install wheel
 python setup.py bdist_wheel
+pip install --ignore-installed PyYAML
 //linux
 conda create -n pyspark python=3.6 ipython pyspark jupyter
 conda activate pyspark
@@ -260,6 +262,9 @@ pip wheel -w DIR -r requirements.txt
 # 也可以自己制定文件夹,如当前目录下的tmp/wheels文件夹
 pip wheel -r requirements.txt --wheel-dir=./tmp/wheels
 pip install --no-index --find-links=path/tmp/wheels -r requirements.txt
+### 查看包依赖关系
+pip install pipdeptree
+pipdeptree -p pandas-profiling
 ```
 ### web http server
 1、 Gunicorn

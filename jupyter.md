@@ -38,6 +38,8 @@ jupyter labextension list
 jupyter labextension install @jupyterlab/git
 jupyter labextension uninstall my-extension
 
+ @jupyter-widgets/jupyterlab-manager v3.0.1 enabled OK (python, jupyterlab_widgets)
+
 jupyterlab_code_formatter  自动格式化代码
 jupytext                   ipynb\py\md文件互相转换
 jupyterlab_spellchecker    markdown拼写核对
@@ -74,6 +76,15 @@ c.JupyterHub.authenticator_class = 'nativeauthenticator.NativeAuthenticator'
 ```markdown
 %config NotebookApp.log_level='DEBUG'
 ```
+- 设置cell输出多个输出
+```
+from IPython.core.interactiveshell import InteractiveShell
+InteractiveShell.ast_node_interactivity = "all"
+```
+- notebook运行终端命令
+```
+!pip install matplotlib
+```
 - 启动jupyterhub
 ```
 sudo jupyterhub -f /etc/jupyterhub/jupyterhub_config.py #allow multiple users to sign in
@@ -91,11 +102,26 @@ conda install -c conda-forge ipython-sql #RDBMS access via IPython https://githu
 conda install -c conda-forge mysql-connector-python
 ```
 
-- 常用命令
+- 常用魔法命令
 ```
+％pwd ＃打印当前工作目录
+％cd ＃更改工作目录
+％ls ＃显示当前目录中的内容
+％load [在此处插入Python文件名] ＃将代码加载到Jupyter Notebook
+％store [在此处插入变量]  ＃这使您可以传递Jupyter Notebooks之间的变量
+％who  ＃使用它列出所有变量
 %lsmagic
+%matplotlib inline
 %%writefile test.py
 %run test.py
+```
+- 增加pandas显示的行数、列数、每列显示字符数
+```markdown
+import pandas as pd
+pd.set_option('display.min_rows', 10)
+pd.set_option('display.max_rows', 500)
+pd.set_option('display.max_columns', 500)
+pd.set_option('display.max_colwidth', 500)
 ```
 - mito
 ```markdown

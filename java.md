@@ -351,6 +351,36 @@ AbstractAutowireCapableBeanFactory
 ```
 PropertySource注解加载指定的属性文件
 @PropertySource(value= {"classpath:config/jdbc.properties"},ignoreResourceNotFound=false,encoding="UTF-8",name="jdbc.properties",)
+@PropertySources(value={
+    @PropertySource(value={"classpath:jdbc1.properties"}),
+    @PropertySource(value={"classpath:jdbc2.properties"}),
+})
+
+@Component
+@PropertySource({"classpath:/jdbc.properties"})
+@Data
+public class Jdbc {
+    @Value("url")
+    private String url;
+}
+
+或
+
+@Data
+public class Jdbc {
+    @Value("url")
+    private String url;
+}
+
+@Configuration
+@PropertySource({"classpath:/jdbc.properties"}) //此时只能放在这里加载
+public class PropertyValueConfig {
+
+    @Bean
+    public Jdbc jdbc(){
+        return new Jdbc();
+    }
+}
 
 @ImportResource引入配置文件
 @ImportResource(locations = {"classpath:beans.xml"})
@@ -361,13 +391,37 @@ PropertySource注解加载指定的属性文件
 @ConfigurationProperties(prefix = "spring.datasource")   注解类，获取PropertySource指定配置文件中已prefix开头的配置信息并注入到ConfigurationProperties注解的类
 @ConfigurationProperties(prefix = "spring.datasource")  注解工厂方法，@bean标识的方法，等同于对工厂生成类进行ConfigurationProperties注解
 
+@ConfigurationProperties(prefix = "customized")
+public class DemoProperties {
+    private String token;
+}
+@Configuration
+@EnableConfigurationProperties(DemoProperties.class)
+@ConditionalOnProperty(prefix = "customized", value = "enable", matchIfMissing = true)
+public class DemoAutoConfiguration {
+
+}
+
 Spring中对资源文件的封装类Resource。如果是classpath开头的，使用的是Resource的子类ClassPathResource。如果是file开头的，则最终使用的类是FileSystemResource
 SpringApplication springApplication = new SpringApplication(DemoApplication.class);
 ConfigurableApplicationContext configurableApplicationContext = springApplication.run(args);
 T bean = configurableApplicationContext.getBean(T.class);
 Environment env =configurableApplicationContext.getEnvironment()
 ```
-
+- @ConditionalOnProperty
+```
+@ConditionalOnProperty 根据配置加载不同实现类
+@ConditionalOnProperty(prefix="config",name = "implement", havingValue = "A")
+Class A implement Super
+@ConditionalOnProperty(prefix="config",name = "implement", havingValue = "B")
+Class B implement Super
+```
+#### java表达式解析
+1、mvel
+https://blog.csdn.net/u012373815/article/details/108007640
+2、aviator
+3、groovy
+4、https://blog.csdn.net/shichen2010/article/details/78466293
 #### 连接池
 ##### druid
 1、打印druid配置信息

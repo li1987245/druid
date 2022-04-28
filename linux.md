@@ -20,6 +20,12 @@ Working Set Size(WSS)是指一个app保持正常运行所须的内存
 当不同的进程使用同一段代码时，比如库文件的代码，在物理内存中可以只存储一份这样的代码，不同进程只要将自己的虚拟内存映射过去就好了，这样可以节省物理内存
 在程序需要分配连续空间的时候，只需要在虚拟内存分配连续空间，而不需要物理内存时连续的，实际上，往往物理内存都是断断续续的内存碎片。这样就可以有效地利用我们的物理内存
 ```
+- 参数
+```markdown
+fs.inotify.max_queued_events：表示调用inotify_init时分配给inotify instance中可排队的event的数目的最大值，超出这个值的事件被丢弃，但会触发IN_Q_OVERFLOW事件。
+fs.inotify.max_user_instances：表示每一个real user ID可创建的inotify instatnces的数量上限，默认128.
+fs.inotify.max_user_watches：表示同一用户同时可以添加的watch数目（watch一般是针对目录，决定了同时同一用户可以监控的目录数量）
+```
 - shell
 ```
 #/bin/bash
@@ -144,6 +150,20 @@ fi
 [ -o optionname ]  如果shell选项optionname开启则返回为真
 注意：变量取值STRINGx 最好放在""内；
 ```
+- array loop
+```
+array=( A B C D 1 2 3 4)
+for(( i=0;i<${#array[@]};i++)) do
+#${#array[@]}获取数组长度用于循环
+echo ${array[i]};
+done;
+
+for element in ${array[@]}
+#也可以写成for element in ${array[*]}
+do
+echo $element
+done
+```
 - source
 ```
 source filename [arguments]
@@ -203,6 +223,8 @@ df -h 或查看挂载情况
 - nfs 挂载
 ```
 mount -t nfs m163p113:/nfs/kwtest /home/jovyan/kwtest
+
+cat /etc/mtab #查看挂载信息
 ```
 - 内核及系统日志
 ```
@@ -287,4 +309,52 @@ sudo sysctl -p --system
     printf "%x\n" 线程id
     jstack -l 9718 > jstack.log 查找16进制的线程id
 ```
+- 查看python方法调用信息
+```markdown
+strace -c python xxx.py
+(base) [jinwei.li@m53p101 ~]$ strace -c python xtx2.py
+time cost is: 1.99814772605896 0.0062410831451416016
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 52.37    0.004446          44       100           read
+  8.12    0.000689           3       192        54 stat
+  6.80    0.000577          36        16           getdents
+  5.88    0.000499           7        67        11 open
+  3.96    0.000336           8        40           mmap
+  3.37    0.000286           3        90           fstat
+  3.32    0.000282           4        67           close
+  2.89    0.000245           3        68           rt_sigaction
+  2.41    0.000205           3        61        55 ioctl
+  2.40    0.000204           6        34           brk
+  2.25    0.000191          12        15           mprotect
+  2.09    0.000177           2        85         3 lseek
+  0.95    0.000081          13         6           munmap
+  0.95    0.000081          20         4         2 readlink
+  0.75    0.000064           8         8           openat
+  0.28    0.000024           8         3           dup
+  0.25    0.000021          21         1         1 access
+  0.20    0.000017          17         1           execve
+  0.15    0.000013           4         3           sigaltstack
+  0.14    0.000012           4         3           fcntl
+  0.13    0.000011           5         2           futex
+  0.09    0.000008           8         1           getrlimit
+  0.08    0.000007           7         1           rt_sigprocmask
+  0.08    0.000007           7         1           set_tid_address
+  0.07    0.000006           6         1           set_robust_list
+  0.00    0.000000           0         1           write
+  0.00    0.000000           0         1           lstat
+  0.00    0.000000           0         1           getcwd
+  0.00    0.000000           0         1           getuid
+  0.00    0.000000           0         1           getgid
+  0.00    0.000000           0         1           geteuid
+  0.00    0.000000           0         1           getegid
+  0.00    0.000000           0         1           arch_prctl
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.008489                   878       126 total
+
+```
 #### FAQ
+
+awk版
+BEGIN在开头添加，END在结尾添加；
+awk 'BEGIN{print "START"}; {print}; END{print "END"}'

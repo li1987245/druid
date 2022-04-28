@@ -377,6 +377,9 @@ SELECT rolname, rsqname, pid, granted,
 
 节点故障等历史信息
 select * from gp_configuration_history tt order by 1 desc ;
+# 查询创建索引
+select * from pg_indexes where tablename='dws_fk_product_d';
+CREATE INDEX idx_dws_fk_product_d_bmp_product_code ON dws_fk_product_d USING bitmap (product_code)
 
 数据倾斜
 SELECT

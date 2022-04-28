@@ -575,6 +575,8 @@ spark.sqlContext.setConf("mapreduce.input.fileinputformat.split.minsize.per.rack
 
 spark.sparkContext.hadoopConfiguration
 
+spark.conf.get("xxxx属性")
+
 spark on hive默认读取hive表inputformat，textinputformat无法对多个小文件做直接合并，可以通过coalesce合并
 ，同时对hive分区，spark会使用unionrdd包装，对单个文件的分区控制，可以通过设置hive on spark相同的参数，hive.input.format不生效
 ```

@@ -554,6 +554,10 @@ TBLPROPERTIES ('orc.compress'='SNAPPY',
 'orc.bloom.filter.columns'='cell,id',
 'orc.bloom.filter.fpp'='0.05');
 ```
+13. distcp
+```
+hadoop distcp -Dmapreduce.job.queuename=dap --overwrite -bandwidth 10 -m 9 hdfs://192.168.20.13/user/loan/kl_limit hdfs://10.100.120.244/user/loan/kl_limit
+```
 
 ### 面试题
 - mapreduce编程模型

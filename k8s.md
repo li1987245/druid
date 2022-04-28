@@ -168,6 +168,7 @@ kubeadm config print init-defaults --component-configs KubeProxyConfiguration #�
 kubectl edit configmap coredns -n kube-system
 
 journalctl -u kubelet # 查看启动日志
+journalctl -r -u kubelet --since today
 
 # get 命令的基本输出
 kubectl get services                          # 列出当前命名空间下的所有 services
@@ -548,6 +549,7 @@ docker volume create nexus-data
 #查看volume信息
 docker inspect nexus-data
 #启动nexus
+```
 docker run -d --name nexus  --restart=always -p 8081:8081 -v nexus-data:/nexus-data  sonatype/nexus3
 docker exec -it ee34232aa37d bash
 cat /nexus-data/admin.password 查看密码
@@ -559,4 +561,36 @@ https://registry.npmjs.org
 设置npm group
 http://192.168.163.114:8081/repository/npm-group/
 ```
+- k8s 挂载点丢失问题排查
+```markdown
+k8s的volume挂载分为attach和mount两步
+1、attach阶段k8s把pvc挂载到宿主机上
+pvc的挂载路径，pod内关联的实际连接
+/var/lib/kubelet/pods/{podID}/volumes/kubernetes.io~nfs/{pvc}
+# df -h /var/lib/kubelet/pods/cde588de-02ad-4773-974b-f6a6c998c7df/volumes/kubernetes.io~nfs/jupyter-pv
+Filesystem                         Size  Used Avail Use% Mounted on
+192.168.163.113:/opt/nfs/projects  445G  130G  316G  30% /var/lib/kubelet/pods/cde588de-02ad-4773-974b-f6a6c998c7df/volumes/kubernetes.io~nfs/jupyter-pv
+# grep -l cde588de /proc/*/mountinfo # 搜索所有进程是否有打开此卷的
 
+pvc subpath的挂载路径
+/var/lib/kubelet/pods/{podID}/volume-subpaths/jupyter-pv/notebook/12/
+# df -h /var/lib/kubelet/pods/cde588de-02ad-4773-974b-f6a6c998c7df/volume-subpaths/jupyter-pv/notebook/12/
+Filesystem                                    Size  Used Avail Use% Mounted on
+192.168.163.113:/opt/nfs/projects/测试软连接  445G  130G  316G  30% /var/lib/kubelet/pods/cde588de-02ad-4773-974b-f6a6c998c7df/volume-subpaths/jupyter-pv/notebook/12
+2、mount阶段k8s挂载
+
+docker inspect {containerID}
+```
+- 校验pod暴露的端口
+```
+kubectl get pods redis-master-xxxxx --template='{{(index (index .spec.containers 0).ports 0).containerPort}}{{"\n"}}'
+```
+- 批量打标签
+```markdown
+for hostname in kubectl get nodes|grep -v NAME|grep -v master|awk '{print $1}';do kubectl label node ${hostname} exp.type=bxy;done
+```
+- 从Docker镜像中提取Dockerfile
+```
+alias dfimage="docker run -v /var/run/docker.sock:/var/run/docker.sock --rm alpine/dfimage" 
+dfimage -sV=1.36 nginx:latest
+```
