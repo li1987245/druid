@@ -175,6 +175,11 @@ Read and execute commands from filename in the current shell environment and ret
 ```
 shell脚本审查
 ```
+- md5sum
+```
+echo -n "微财营销分析202205" |md5sum 等同于python hashlib.md5("微财营销分析202205".encode(encoding='UTF-8')).hexdigest()
+-n的左右是去掉echo输出的\n
+```
 
 - 常用命令
 ```

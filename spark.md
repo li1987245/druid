@@ -154,8 +154,9 @@ spark-submit --class org.apache.spark.examples.SparkPi \
     examples/jars/spark-examples*.jar \
     10
 spark-shell --master yarn  --driver-memory 512m --executor-memory 512m
+--num-executors 100 --executor-cores 4 --driver-memory 6g --executor-memory 6g
 
--num-executors 100 --executor-cores 4 --driver-memory 6g --executor-memory 6g
+spark-shell --conf "spark.hadoop.hive.exec.dynamic.partition.mode=nonstrict"
 ```
 
 hive with spark
@@ -182,6 +183,8 @@ set spark.serializer=org.apache.spark.serializer.KryoSerializer;
 ```markdown
 bin/spark-submit --class path.to.your.Class --master yarn --deploy-mode cluster [options] <app jar> [app options]
 spark-submit --master yarn --deploy-mode client streaming.py #python 
+
+spark-shell --conf "spark.hadoop.hive.exec.dynamic.partition.mode=nonstrict"
 ```
 - DataFrame：
 ```markdown
