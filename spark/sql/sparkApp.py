@@ -12,7 +12,7 @@ from pyspark.sql import SparkSession
 
 
 
-SUBMIT_ARGS = "--jars /D:/repository/mysql/mysql-connector-java/5.1.47/mysql-connector-java-5.1.47.jar pyspark-shell"
+SUBMIT_ARGS = "--jars /E:/repository/mysql/mysql-connector-java/5.1.47/mysql-connector-java-5.1.47.jar pyspark-shell"
 os.environ["PYSPARK_SUBMIT_ARGS"] = SUBMIT_ARGS
 
 spark = SparkSession.builder.master("local[*]") \

@@ -267,9 +267,46 @@ java -verbose:jni
 一、同步省略。如果一个对象被发现只能从一个线程被访问到，那么对于这个对象的操作可以不考虑同步。
 二、将堆分配转化为栈分配。如果一个对象在子程序中被分配，要使指向该对象的指针永远不会逃逸，对象可能是栈分配的候选，而不是堆分配。
 三、分离对象或标量替换。有的对象可能不需要作为一个连续的内存结构存在也可以被访问到，那么对象的部分（或全部）可以不存储在内存，而是存储在CPU寄存器中。
+四、锁消除
+栈上分配好处在于new语句所在的方法退出时，通过弹出当前方法的栈桢来自动回收所分配的内存空间
 在Java代码运行时，通过JVM参数可指定是否开启逃逸分析，
 -XX:+DoEscapeAnalysis ： 表示开启逃逸分析
 -XX:-DoEscapeAnalysis ： 表示关闭逃逸分析 从jdk 1.7开始已经默认开始逃逸分析，如需关闭，需要指定-XX:-DoEscapeAnalysi
+```
+- jvm JIT
+```
+开启分层编译，JDK8之后默认是开启
+-XX:+TieredCompilation 
+JIT触发条件
+方法的调用次数和循环回边的次数的和超过-XX:TierXInvocationThreshold指定的阈值乘以系数
+1. 中间表达形式IR（Intermediate Representation） 消除未使用变量或等价计算
+2.方法内联 编译过程中遇到方法调用时，将目标方法的方法体纳入编译范围
+3. 逃逸分析 
+4. Loop Transformations
+
+-XX:+TieredCompilation：开启分层编译，JDK8之后默认开启
+-XX:+CICompilerCount=N：编译线程数，设置数量后，JVM会自动分配线程数，C1:C2 = 1:2
+-XX:TierXBackEdgeThreshold：OSR编译的阈值
+-XX:TierXMinInvocationThreshold：开启分层编译后各层调用的阈值
+-XX:TierXCompileThreshold：开启分层编译后的编译阈值
+-XX:ReservedCodeCacheSize：热点代码缓存最大大小
+-XX:InitialCodeCacheSize：热点代码缓存初始大小   
+-XX:+PrintCompilation：在控制台打印编译信息；
+-XX:+PrintInlining：要求JVM输出方法内联信息（Product版本需要-XX:+UnlockDiagnosticVMOptions选项,打开JVM诊断模式）；
+-XX:+PrintAssembly：JVM安装反汇编适配器后，该参数使得JVM输出编译方法的汇编代码（Product版本需要-XX:+UnlockDiagnosticVMOptions选项,打开JVM诊断模式）；
+-XX:+PrintLIR：输出比较接近最终结果的中间代码表示，包含一些注释信息（用于C1，Debug版本）；
+-XX:+PrintOptoAssembly：输出比较接近最终结果的中间代码表示，包含一些注释信息（用于C2，非Product版本）；
+-XX:+PrintCFGToFile：将JVM编译过程中各个阶段的数据输出到文件中,而后用工具C1 Visualizer分析（用于C1，Debug版本）；
+-XX:+PrintIdealGraphFile：将JVM编译过程中各个阶段的数据输出到文件中，而后用工具IdealGraphVisualizer分析（用于C2，非Product版本）；
+-XX:+UnlockDiagnosticVMOptions -XX:+PrintCompilation -XX:+PrintInlining -XX:+PrintCodeCache -XX:+PrintCodeCacheOnCompilation -XX:+TraceClassLoading -XX:+LogCompilation -XX:LogFile=LogPath参数可以输出编译、内联、codeCache信息到文件。但是打印的编译日志多且复杂很难直接从其中得到信息，可以使用JITwatch的工具来分析编译日志
+java -XX:+PrintCompilation -XX:+UnlockDiagnosticVMOptions -XX:+PrintInlining
+
+-XX:-DoEscapeAnalysis -XX:+PrintGCDetails 关闭栈上分配
+```
+- java 字节码
+```
+javac -encoding UTF-8 -g JavaAsm.java #编译成class
+javap -verbose JavaAsm.class #查看字节码
 ```
 - java 更新jar包
 ```

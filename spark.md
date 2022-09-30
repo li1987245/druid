@@ -154,9 +154,22 @@ spark-submit --class org.apache.spark.examples.SparkPi \
     examples/jars/spark-examples*.jar \
     10
 spark-shell --master yarn  --driver-memory 512m --executor-memory 512m
---num-executors 100 --executor-cores 4 --driver-memory 6g --executor-memory 6g
-
+spark-shell --master yarn --num-executors 100 --executor-cores 4 --driver-memory 6g --executor-memory 6g
+spark-shell --master yarn --deploy-mode client --queue default \
+--executor-cores 4 --driver-memory 6g --executor-memory 6g \
+--conf spark.sql.shuffle.partitions=2000 \
+--conf spark.shuffle.service.enabled=true \
+--conf spark.dynamicAllocation.enabled=true \
+--conf spark.dynamicAllocation.executorIdleTimeout=120 \
+--conf spark.dynamicAllocation.initialExecutors=4 \
+--conf spark.memory.storageFraction=0.4 \
+--conf spark.executor.memoryOverhead=2048 \
+--conf spark.executor.heartbeatInterval=300000 \
+--conf spark.network.timeout=500000 \
+--files /home/jinwei.li/spark/conf/log4j.properties
 spark-shell --conf "spark.hadoop.hive.exec.dynamic.partition.mode=nonstrict"
+
+spark.conf.set("spark.sql.codegen.wholeStage", false)
 ```
 
 hive with spark

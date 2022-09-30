@@ -72,9 +72,73 @@ c.JupyterHub.hub_bind_url = 'http://0.0.0.0:8000'
 c.JupyterHub.authenticator_class = 'nativeauthenticator.NativeAuthenticator'
 
 ```
+- nginx配置
+```
+# top-level http config for websocket headers
+# If Upgrade is defined, Connection = upgrade
+# If Upgrade is empty, Connection = close
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+# HTTP server to redirect all 80 traffic to SSL/HTTPS
+server {
+    listen 80;
+    server_name HUB.DOMAIN.TLD;
+
+    # Tell all requests to port 80 to be 302 redirected to HTTPS
+    return 302 https://$host$request_uri;
+}
+
+# HTTPS server to handle JupyterHub
+server {
+    listen 443;
+    ssl on;
+
+    server_name HUB.DOMAIN.TLD;
+
+    ssl_certificate /etc/letsencrypt/live/HUB.DOMAIN.TLD/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/HUB.DOMAIN.TLD/privkey.pem;
+
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+    ssl_prefer_server_ciphers on;
+    ssl_dhparam /etc/ssl/certs/dhparam.pem;
+    ssl_ciphers 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA';
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:50m;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    add_header Strict-Transport-Security max-age=15768000;
+
+    # Managing literal requests to the JupyterHub front end
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        # websocket headers
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header X-Scheme $scheme;
+
+        proxy_buffering off;
+    }
+
+    # Managing requests to verify letsencrypt host
+    location ~ /.well-known {
+        allow all;
+    }
+}
+```
 - 设置ipython日志级别
 ```markdown
+%config Application.log_level='DEBUG'
 %config NotebookApp.log_level='DEBUG'
+%config Session.debug = True
+
 ```
 - 设置cell输出多个输出
 ```
@@ -174,13 +238,6 @@ hub-secret templates/hub/secret.yaml定义
 文件共享
 
 ```
-hub-777f44cbf7-2z5q9
-
-李新河 2020-12-22 10:12:15
-15231276173@163.com
-
-李新河 2020-12-22 10:12:21
-密码15231276173Lii
 
 
 - jupyterhub 访问 jupyterlab 404
@@ -212,6 +269,25 @@ def old_style_coroutine():
 
 async def main():
     await old_style_coroutine()
+```
+- jupyter kernel reconnect测试
+```
+windows测试
+1、创建端口转发
+netsh interface portproxy add v4tov4  listenport=8889 listenaddress=localhost connectport=8888 connectaddress=localhost
+2、使用8889端口启动jupyterlab，执行
+import time
+step = 1
+while step < 30:
+    print(f"Step {step}")
+    time.sleep(30)
+    step = step + 1
+    
+print('Done')
+3、删除8889端口映射
+netsh interface portproxy reset
+4、恢复端口转发
+
 ```
 
 ### FAQ
